@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Additive Manufacturing Portfolio | David Shunk</title>
     <style>
-        /* --- GLOBAL STYLES --- */
+        /* --- GLOBAL STYLES (Matches Home Page) --- */
         :root {
             --primary-color: #0c2340;
             --gold: #ae9142;
@@ -14,7 +14,7 @@
             --bg-light: #f3f4f6;
             --white: #ffffff;
         }
-        body { font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; color: var(--text-dark); line-height: 1.6; }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; color: var(--text-dark); line-height: 1.6; background-color: var(--white); }
         a { text-decoration: none; color: inherit; }
         
         /* HEADER */
@@ -26,8 +26,8 @@
 
         /* HERO - USING WORKSTATION PHOTO */
         .project-hero {
-            /* This uses your workstation photo with a dark overlay so text is readable */
-            background: linear-gradient(rgba(12, 35, 64, 0.8), rgba(12, 35, 64, 0.8)), url('workstation.jpg');
+            /* Ensure 'workstation.jpg' is uploaded */
+            background: linear-gradient(rgba(12, 35, 64, 0.85), rgba(12, 35, 64, 0.85)), url('workstation.jpg');
             background-size: cover;
             background-position: center;
             color: white;
@@ -39,14 +39,17 @@
 
         /* CONTENT CONTAINERS */
         .container { max-width: 900px; margin: auto; padding: 4rem 2rem; }
-        .section-block { margin-bottom: 5rem; }
+        
+        /* Consistent Section Spacing & Colors */
+        .section-block { margin-bottom: 4rem; padding-bottom: 4rem; border-bottom: 1px solid #eee; }
+        .section-block:last-child { border-bottom: none; }
         
         h2 { color: var(--primary-color); font-size: 2rem; border-left: 5px solid var(--gold); padding-left: 1rem; margin-bottom: 1.5rem; }
         h3 { font-size: 1.3rem; margin-bottom: 0.5rem; color: var(--text-dark); }
         p { color: #374151; margin-bottom: 1.5rem; font-size: 1.1rem; }
 
         /* IMAGE STYLES */
-        .grid-gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 1.5rem; margin-top: 2rem; }
+        .grid-gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; margin-top: 2rem; }
         
         .gallery-item { text-align: center; }
         
@@ -57,10 +60,11 @@
             border-radius: 8px; 
             box-shadow: 0 4px 10px rgba(0,0,0,0.15); 
             transition: transform 0.3s;
+            background-color: #eee; /* Light gray placeholder while loading */
         }
         .gallery-img:hover { transform: scale(1.02); }
 
-        .caption { margin-top: 0.5rem; font-size: 0.9rem; color: var(--text-light); font-style: italic; }
+        .caption { margin-top: 0.8rem; font-size: 0.95rem; color: var(--text-light); }
 
         /* STATS BOX */
         .stats-grid {
@@ -86,6 +90,9 @@
             transition: all 0.3s;
         }
         .btn-outline:hover { background: var(--primary-color); color: white; }
+        
+        .attribution { font-size: 0.85rem; color: var(--text-light); margin-top: 0.5rem; }
+        .attribution a { text-decoration: underline; }
 
         @media (max-width: 768px) {
             .stats-grid { grid-template-columns: 1fr; }
@@ -116,7 +123,8 @@
 
         <div class="section-block">
             <h2>The Setup & Applications</h2>
-            <p>My workshop centers around a Prusa MK4s equipped with the MMU3 multi-material unit. To ensure industrial-grade reliability for warp-prone materials like ABS and ASA, I designed a custom temperature-controlled enclosure.</p>
+            <p>My workshop centers around a Prusa MK4s equipped with the MMU3 multi-material unit. I built a custom enclosure for the printer because I needed to print high-temperature materials like ABS for my engineering projects. Without the enclosure, the parts would warp from drafts in the room. I also added a fume extraction system so I could run long prints safely in my workspace.</p>
+            <p>This setup allows me to prototype complex mechanical parts reliably. For example, I used this machine to manufacture suspension components for the Lehigh Formula SAE team. The printer ran for days at a time to produce the parts we needed to test our suspension geometry before committing to metal machining.</p>
             
             <div class="grid-gallery">
                 <div class="gallery-item">
@@ -133,17 +141,19 @@
 
         <div class="section-block">
             <h2>Mechatronics: Pen Plotter Conversion</h2>
-            <p>To experiment with CNC motion paths beyond traditional filament printing, I designed a modular attachment that converts the 3D printer into a precision 2D pen plotter. This required modifying G-code generation scripts to alter Z-hop behavior for drawing instruments.</p>
+            <p>I wanted to experiment with CNC motion paths beyond traditional filament printing, so I designed a modular attachment that converts my 3D printer into a precision 2D pen plotter. I modeled a custom carriage in Fusion 360 that snaps onto the print head and can hold various drafting tools.</p>
+            <p>The hardest part was the software. I had to manually modify the G-code generation scripts to change how the printer handles "Z-hop" movements. Instead of retracting filament, the printer now physically lifts the pen off the paper between drawing strokes.</p>
             
             <div style="text-align: center; margin-top: 2rem;">
                 <img src="plotter.jpg" alt="Pen Plotter Mod" class="gallery-img" style="max-width: 800px; height: auto;">
-                <div class="caption">Custom carriage design modeled in Fusion 360 to hold various drafting tools.</div>
+                <div class="caption">My custom carriage design modeled in Fusion 360.</div>
             </div>
         </div>
 
         <div class="section-block">
             <h2>Impact: COVID-19 Face Shield Response</h2>
-            <p>In March 2020, I converted my workshop into a 24/7 manufacturing line to address the PPE shortage. Coordinating with local hospitals, I produced and delivered face shields to front-line workers.</p>
+            <p>In March 2020, during the PPE shortage, I converted my workshop into a 24/7 manufacturing line. I worked with the Prusa Face Shield design which was open-sourced for the community. I optimized the print settings to speed up production and ran the printer around the clock.</p>
+            <p>I coordinated directly with local hospitals to deliver over 400 face shields to front-line workers at Overlook and Morristown Medical Centers.</p>
             
             <div class="stats-grid">
                 <div>
@@ -168,12 +178,20 @@
                 
                 <div class="gallery-item">
                     <img src="doctors.jpg" alt="Doctors at Overlook" class="gallery-img">
-                    <div class="caption">Staff at Overlook Medical Center wearing the printed shields.</div>
+                    <div class="caption">Staff at Overlook Medical Center wearing the shields.</div>
+                </div>
+
+                <div class="gallery-item">
+                    <img src="masks.jpg" alt="Me printing masks" class="gallery-img">
+                    <div class="caption">Managing the print farm during the 24/7 production run.</div>
                 </div>
             </div>
 
             <div style="text-align: center; margin-top: 2rem;">
                  <a href="https://www.youtube.com/watch?v=ZLS_I4OvBy4&t=2s" target="_blank" class="btn-outline">Watch Summit Spotlight Video &rarr;</a>
+                 <div class="attribution">
+                    Face Shield Design by <a href="https://www.printables.com/model/25857-prusa-face-shield" target="_blank">Prusa Research</a>
+                 </div>
             </div>
         </div>
 
