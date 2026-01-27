@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Printer - Prusa MK4s | David Shunk</title>
+    <style>
+        /* Reuse Global Styles for Consistency */
+        :root {
+            --primary-color: #0c2340;
+            --gold: #ae9142;
+            --text-dark: #1f2937;
+            --text-light: #6b7280;
+            --bg-light: #f3f4f6;
+            --white: #ffffff;
+        }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; color: var(--text-dark); line-height: 1.6; }
+        a { text-decoration: none; color: inherit; }
+        
+        /* Nav (Simplified for Subpages) */
+        header { background: var(--white); box-shadow: 0 2px 5px rgba(0,0,0,0.1); padding: 1rem 2rem; position: sticky; top: 0; }
+        nav { max-width: 1100px; margin: auto; display: flex; justify-content: space-between; align-items: center; }
+        .logo { font-size: 1.5rem; font-weight: bold; color: var(--primary-color); }
+        .back-link { font-weight: 500; color: var(--text-light); }
+        .back-link:hover { color: var(--primary-color); }
+
+        /* Project Content */
+        .project-hero {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 4rem 2rem;
+            text-align: center;
+        }
+        .container { max-width: 900px; margin: auto; padding: 2rem; }
+        
+        .main-image {
+            width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        h1 { margin: 0; font-size: 2.5rem; }
+        .tech-stack { margin-top: 1rem; color: #cbd5e1; font-family: monospace; }
+        
+        h2 { color: var(--primary-color); border-bottom: 2px solid var(--gold); padding-bottom: 0.5rem; margin-top: 2rem; }
+        p { font-size: 1.1rem; color: #374151; }
+        ul { margin-left: 1.5rem; }
+        li { margin-bottom: 0.5rem; }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <nav>
+            <div class="logo"><a href="index.html">David Shunk</a></div>
+            <a href="index.html#projects" class="back-link">&larr; Back to Projects</a>
+        </nav>
+    </header>
+
+    <div class="project-hero">
+        <h1>3D Printer - Prusa MK4s + MMU3</h1>
+        <div class="tech-stack">Hardware | G-Code | Calibration | Assembly</div>
+    </div>
+
+    <div class="container">
+        <img src="https://via.placeholder.com/900x500" alt="Prusa Printer" class="main-image">
+
+        <h2>Project Overview</h2>
+        <p>This project involved the complete assembly, calibration, and modification of a Prusa MK4s 3D printer with the MMU3 (Multi-Material Upgrade). The goal was to establish a reliable rapid-prototyping station capable of printing complex geometries in multiple materials.</p>
+
+        <h2>Technical Challenges</h2>
+        <ul>
+            <li><strong>MMU3 Integration:</strong> Calibrated the buffer and selector to handle filament swaps without jamming.</li>
+            <li><strong>Precision Assembly:</strong> Squared the frame to within 0.1mm tolerance to ensure dimensional accuracy of printed parts.</li>
+            <li><strong>Material Tuning:</strong> Tuned profiles in PrusaSlicer for PLA, PETG, and TPU.</li>
+        </ul>
+
+        <h2>Outcome</h2>
+        <p>The printer is now the workhorse for my other engineering projects, including parts for the Autonomous Medical Robot and Drone chassis components.</p>
+    </div>
+
+</body>
+</html>
