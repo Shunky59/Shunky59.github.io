@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Printer - Prusa MK4s | David Shunk</title>
+    <title>Additive Manufacturing Portfolio | David Shunk</title>
     <style>
-        /* Reuse Global Styles for Consistency */
+        /* --- GLOBAL STYLES --- */
         :root {
             --primary-color: #0c2340;
             --gold: #ae9142;
@@ -17,38 +17,80 @@
         body { font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; color: var(--text-dark); line-height: 1.6; }
         a { text-decoration: none; color: inherit; }
         
-        /* Nav (Simplified for Subpages) */
-        header { background: var(--white); box-shadow: 0 2px 5px rgba(0,0,0,0.1); padding: 1rem 2rem; position: sticky; top: 0; }
+        /* HEADER */
+        header { background: var(--white); box-shadow: 0 2px 5px rgba(0,0,0,0.1); padding: 1rem 2rem; position: sticky; top: 0; z-index: 1000;}
         nav { max-width: 1100px; margin: auto; display: flex; justify-content: space-between; align-items: center; }
         .logo { font-size: 1.5rem; font-weight: bold; color: var(--primary-color); }
-        .back-link { font-weight: 500; color: var(--text-light); }
+        .back-link { font-weight: 500; color: var(--text-light); display: flex; align-items: center; gap: 5px; }
         .back-link:hover { color: var(--primary-color); }
 
-        /* Project Content */
+        /* HERO - USING WORKSTATION PHOTO */
         .project-hero {
-            background-color: var(--primary-color);
+            /* This uses your workstation photo with a dark overlay so text is readable */
+            background: linear-gradient(rgba(12, 35, 64, 0.8), rgba(12, 35, 64, 0.8)), url('workstation.jpg');
+            background-size: cover;
+            background-position: center;
             color: white;
-            padding: 4rem 2rem;
+            padding: 6rem 2rem;
             text-align: center;
         }
-        .container { max-width: 900px; margin: auto; padding: 2rem; }
+        .hero-tags { margin-top: 1rem; display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap; }
+        .hero-tag { border: 1px solid var(--gold); padding: 5px 15px; border-radius: 20px; font-size: 0.9rem; color: var(--gold); }
+
+        /* CONTENT CONTAINERS */
+        .container { max-width: 900px; margin: auto; padding: 4rem 2rem; }
+        .section-block { margin-bottom: 5rem; }
         
-        .main-image {
-            width: 100%;
-            height: auto;
-            border-radius: 8px;
-            margin-bottom: 2rem;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        h2 { color: var(--primary-color); font-size: 2rem; border-left: 5px solid var(--gold); padding-left: 1rem; margin-bottom: 1.5rem; }
+        h3 { font-size: 1.3rem; margin-bottom: 0.5rem; color: var(--text-dark); }
+        p { color: #374151; margin-bottom: 1.5rem; font-size: 1.1rem; }
+
+        /* IMAGE STYLES */
+        .grid-gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 1.5rem; margin-top: 2rem; }
+        
+        .gallery-item { text-align: center; }
+        
+        .gallery-img { 
+            width: 100%; 
+            height: 300px; 
+            object-fit: cover; 
+            border-radius: 8px; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15); 
+            transition: transform 0.3s;
         }
+        .gallery-img:hover { transform: scale(1.02); }
 
-        h1 { margin: 0; font-size: 2.5rem; }
-        .tech-stack { margin-top: 1rem; color: #cbd5e1; font-family: monospace; }
-        
-        h2 { color: var(--primary-color); border-bottom: 2px solid var(--gold); padding-bottom: 0.5rem; margin-top: 2rem; }
-        p { font-size: 1.1rem; color: #374151; }
-        ul { margin-left: 1.5rem; }
-        li { margin-bottom: 0.5rem; }
+        .caption { margin-top: 0.5rem; font-size: 0.9rem; color: var(--text-light); font-style: italic; }
 
+        /* STATS BOX */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            text-align: center;
+            background: var(--bg-light);
+            padding: 2rem;
+            border-radius: 8px;
+            margin: 2rem 0;
+        }
+        .stat-number { display: block; font-size: 2.5rem; font-weight: bold; color: var(--primary-color); }
+        .stat-label { font-size: 0.9rem; color: var(--text-light); text-transform: uppercase; letter-spacing: 1px; }
+
+        .btn-outline {
+            display: inline-block;
+            border: 2px solid var(--primary-color);
+            color: var(--primary-color);
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        .btn-outline:hover { background: var(--primary-color); color: white; }
+
+        @media (max-width: 768px) {
+            .stats-grid { grid-template-columns: 1fr; }
+            .project-hero { padding: 3rem 1rem; }
+        }
     </style>
 </head>
 <body>
@@ -61,25 +103,84 @@
     </header>
 
     <div class="project-hero">
-        <h1>3D Printer - Prusa MK4s + MMU3</h1>
-        <div class="tech-stack">Hardware | G-Code | Calibration | Assembly</div>
+        <h1 style="font-size: 3rem; margin: 0;">Additive Manufacturing & Prototyping</h1>
+        <p style="color: #cbd5e1; max-width: 600px; margin: 1rem auto;">From mass production for emergency response to precision mechatronics modification.</p>
+        <div class="hero-tags">
+            <span class="hero-tag">Prusa MK4s + MMU3</span>
+            <span class="hero-tag">SolidWorks</span>
+            <span class="hero-tag">G-Code Modification</span>
+        </div>
     </div>
 
     <div class="container">
-        <img src="https://via.placeholder.com/900x500" alt="Prusa Printer" class="main-image">
 
-        <h2>Project Overview</h2>
-        <p>This project involved the complete assembly, calibration, and modification of a Prusa MK4s 3D printer with the MMU3 (Multi-Material Upgrade). The goal was to establish a reliable rapid-prototyping station capable of printing complex geometries in multiple materials.</p>
+        <div class="section-block">
+            <h2>The Setup & Applications</h2>
+            <p>My workshop centers around a Prusa MK4s equipped with the MMU3 multi-material unit. To ensure industrial-grade reliability for warp-prone materials like ABS and ASA, I designed a custom temperature-controlled enclosure.</p>
+            
+            <div class="grid-gallery">
+                <div class="gallery-item">
+                    <img src="enclosure.jpg" alt="Custom Enclosure" class="gallery-img">
+                    <div class="caption">Custom-built thermal enclosure with fume extraction.</div>
+                </div>
+                
+                <div class="gallery-item">
+                    <img src="sae.jpg" alt="Lehigh Formula SAE" class="gallery-img">
+                    <div class="caption">Prototyping suspension components for Lehigh Formula SAE.</div>
+                </div>
+            </div>
+        </div>
 
-        <h2>Technical Challenges</h2>
-        <ul>
-            <li><strong>MMU3 Integration:</strong> Calibrated the buffer and selector to handle filament swaps without jamming.</li>
-            <li><strong>Precision Assembly:</strong> Squared the frame to within 0.1mm tolerance to ensure dimensional accuracy of printed parts.</li>
-            <li><strong>Material Tuning:</strong> Tuned profiles in PrusaSlicer for PLA, PETG, and TPU.</li>
-        </ul>
+        <div class="section-block">
+            <h2>Mechatronics: Pen Plotter Conversion</h2>
+            <p>To experiment with CNC motion paths beyond traditional filament printing, I designed a modular attachment that converts the 3D printer into a precision 2D pen plotter. This required modifying G-code generation scripts to alter Z-hop behavior for drawing instruments.</p>
+            
+            <div style="text-align: center; margin-top: 2rem;">
+                <img src="plotter.jpg" alt="Pen Plotter Mod" class="gallery-img" style="max-width: 800px; height: auto;">
+                <div class="caption">Custom carriage design modeled in Fusion 360 to hold various drafting tools.</div>
+            </div>
+        </div>
 
-        <h2>Outcome</h2>
-        <p>The printer is now the workhorse for my other engineering projects, including parts for the Autonomous Medical Robot and Drone chassis components.</p>
+        <div class="section-block">
+            <h2>Impact: COVID-19 Face Shield Response</h2>
+            <p>In March 2020, I converted my workshop into a 24/7 manufacturing line to address the PPE shortage. Coordinating with local hospitals, I produced and delivered face shields to front-line workers.</p>
+            
+            <div class="stats-grid">
+                <div>
+                    <span class="stat-number">410+</span>
+                    <span class="stat-label">Units Delivered</span>
+                </div>
+                <div>
+                    <span class="stat-number">2</span>
+                    <span class="stat-label">Hospitals Supplied</span>
+                </div>
+                <div>
+                    <span class="stat-number">100%</span>
+                    <span class="stat-label">Donated</span>
+                </div>
+            </div>
+
+            <div class="grid-gallery">
+                <div class="gallery-item">
+                    <img src="ems.jpg" alt="Donation to Summit EMS" class="gallery-img">
+                    <div class="caption">Delivering supplies to the Summit Emergency Squad.</div>
+                </div>
+                
+                <div class="gallery-item">
+                    <img src="doctors.jpg" alt="Doctors at Overlook" class="gallery-img">
+                    <div class="caption">Staff at Overlook Medical Center wearing the printed shields.</div>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 2rem;">
+                 <a href="https://www.youtube.com/watch?v=ZLS_I4OvBy4&t=2s" target="_blank" class="btn-outline">Watch Summit Spotlight Video &rarr;</a>
+            </div>
+        </div>
+
+    </div>
+
+    <div style="text-align: center; padding: 2rem; background: var(--primary-color); color: white;">
+        <p>&copy; 2026 David Shunk</p>
     </div>
 
 </body>
