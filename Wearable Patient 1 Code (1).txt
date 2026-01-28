@@ -1,0 +1,377 @@
+#include <WiFi.h>
+#include <Adafruit_NeoPixel.h>
+#include <Arduino.h> // Include for array sorting (qsort)
+
+// --- !! CONFIGURATION !! ---
+const int PATIENT_ID = 1;
+
+// --- WiFi & Web Server Config ---
+const char* ssid = "Group09Robot";
+WiFiServer server(80);
+
+// --- Static IP Configuration ---
+IPAddress gateway(192, 168, 4, 1);
+IPAddress subnet(255, 255, 255, 0);
+IPAddress local_IP(192, 168, 4, 21); // <-- CHANGE THIS FOR EACH DEVICE
+
+
+// --- Pin Definitions ---
+const int RGB_LED_PIN = 10;
+const int BUTTON_PIN = 7;
+const int TEMP_PIN = 1; // <-- Make sure this is your working pin!
+
+// --- RGB LED Setup ---
+Adafruit_NeoPixel pixels(1, RGB_LED_PIN, NEO_GRB + NEO_KHZ800);
+
+// --- Logic Thresholds ---
+const float TEMP_THRESHOLD_F = 90.0;
+const float TEMP_MAX_READING_F = 180.0;
+const float TEMP_MIN_READING_F = 0.0;
+const float TEMP_F_OFFSET = -10.0; // <-- !! HERE IS THE NEW OFFSET !!
+const unsigned long FEVER_DURATION_MS = 5000;
+const unsigned long BUTTON_WINDOW_MS = 5000;
+const unsigned long BUTTON_RESET_HOLD_MS = 15000;
+const unsigned long DEBOUNCE_DELAY_MS = 50;
+
+// --- LED Colors (for readability) ---
+uint32_t COLOR_RED     = pixels.Color(255, 0, 0);
+uint32_t COLOR_GREEN   = pixels.Color(0, 255, 0);
+uint32_t COLOR_BLUE    = pixels.Color(0, 0, 255);
+uint32_t COLOR_ORANGE  = pixels.Color(255, 100, 0);
+uint32_t COLOR_MAGENTA = pixels.Color(255, 0, 255);
+uint32_t COLOR_BLACK   = pixels.Color(0, 0, 0);
+
+// --- GLOBAL STATE VARIABLES ---
+bool g_feverActivated = false;
+bool g_buttonActivated = false;
+unsigned long g_tempHighStartTime = 0;
+bool g_isTempCurrentlyHigh = false;
+int g_buttonState = HIGH;
+int g_lastButtonState = HIGH;
+unsigned long g_lastDebounceTime = 0;
+int g_buttonPressCount = 0;
+unsigned long g_firstPressTime = 0;
+unsigned long g_buttonHoldStartTime = 0;
+
+// --- Temperature Filter Globals ---
+const int TEMP_READING_COUNT = 11;
+float g_tempReadings[TEMP_READING_COUNT];
+int g_readingCounter = 0;
+bool g_filterIsPrimed = false;
+float g_lastGoodMedian = 80.0; // Fallback value (updated to 70 + 10 offset)
+
+// =============================================================================
+//  SETUP
+// =============================================================================
+void setup() {
+  Serial.begin(115200);
+
+  pixels.begin();
+  pixels.setBrightness(40);
+  pinMode(BUTTON_PIN, INPUT_PULLUP);
+  pinMode(TEMP_PIN, INPUT);
+  
+  pixels.setPixelColor(0, COLOR_ORANGE);
+  pixels.show();
+  
+  Serial.println("Waiting for sensor filter to prime...");
+  for (int i = 0; i < TEMP_READING_COUNT; i++) {
+    g_tempReadings[i] = 0.0;
+  }
+
+  // --- Static IP and WiFi Connection ---
+  Serial.print("Configuring static IP for Patient ");
+  Serial.println(PATIENT_ID);
+  if (!WiFi.config(local_IP, gateway, subnet)) {
+    Serial.println("Static IP Failed to configure");
+    while(true){
+      pixels.setPixelColor(0, COLOR_MAGENTA);
+      pixels.show(); delay(500);
+      pixels.setPixelColor(0, COLOR_BLACK);
+      pixels.show(); delay(500);
+    }
+  }
+
+  Serial.println("Connecting to WiFi...");
+  WiFi.begin(ssid);
+
+  int attempts = 0;
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+    pixels.setPixelColor(0, COLOR_ORANGE);
+    pixels.show();
+    
+    if (attempts++ > 30) {
+      Serial.println("\nFailed to connect.");
+      while(true) {
+        pixels.setPixelColor(0, COLOR_RED);
+        pixels.show(); delay(500);
+        pixels.setPixelColor(0, COLOR_BLACK);
+        pixels.show(); delay(500);
+      }
+    }
+  }
+
+  Serial.println("\nWiFi connected!");
+  Serial.print("Patient " + String(PATIENT_ID) + " IP address: ");
+  Serial.println(WiFi.localIP());
+  server.begin();
+  
+  pixels.setPixelColor(0, COLOR_GREEN);
+  pixels.show();
+  delay(1000);
+}
+
+// =============================================================================
+//  MAIN LOOP
+// =============================================================================
+void loop() {
+  unsigned long currentMillis = millis();
+  float currentTempF = readAndPrintTemperature();
+  int currentButtonReading = digitalRead(BUTTON_PIN);
+  handleButtonLogic(currentButtonReading, currentMillis);
+  handleTemperatureLogic(currentTempF, currentMillis);
+  updateLEDStatus();
+  handleWebServer(currentTempF);
+}
+
+// =============================================================================
+//  LOGIC HANDLERS (Unchanged)
+// =============================================================================
+void handleTemperatureLogic(float tempF, unsigned long currentMillis) {
+  if (tempF == -9999.0) {
+    if (g_isTempCurrentlyHigh) {
+      Serial.println("Temp sensor disconnected. Resetting timer.");
+    }
+    g_isTempCurrentlyHigh = false;
+    g_tempHighStartTime = 0;
+    return;
+  }
+  if (tempF >= TEMP_THRESHOLD_F) {
+    if (!g_isTempCurrentlyHigh) {
+      g_isTempCurrentlyHigh = true;
+      g_tempHighStartTime = currentMillis;
+      Serial.println("Temperature is HIGH. Starting 5-second timer.");
+    }
+    if (g_isTempCurrentlyHigh && (currentMillis - g_tempHighStartTime >= FEVER_DURATION_MS)) {
+      if (!g_feverActivated) {
+         Serial.println("FEVER ALERT ACTIVATED (5s+).");
+         g_feverActivated = true;
+      }
+    }
+  } else {
+    if (g_isTempCurrentlyHigh) {
+      Serial.println("Temperature returned to normal.");
+    }
+    g_isTempCurrentlyHigh = false;
+    g_tempHighStartTime = 0;
+  }
+}
+
+void handleButtonLogic(int reading, unsigned long currentMillis) {
+  if (reading != g_lastButtonState) {
+    g_lastDebounceTime = currentMillis;
+  }
+  if ((currentMillis - g_lastDebounceTime) > DEBOUNCE_DELAY_MS) {
+    if (reading != g_buttonState) {
+      g_buttonState = reading;
+      if (g_buttonState == LOW) {
+        Serial.println("Button PRESSED");
+        g_buttonHoldStartTime = currentMillis;
+        if (g_buttonPressCount == 0 || (currentMillis - g_firstPressTime > BUTTON_WINDOW_MS)) {
+          g_buttonPressCount = 1;
+          g_firstPressTime = currentMillis;
+          Serial.println("Starting 5-sec alert window. Press 1.");
+        } else {
+          g_buttonPressCount++;
+          Serial.print("Press " + String(g_buttonPressCount) + " in window.");
+        }
+        if (g_buttonPressCount >= 3) {
+          Serial.println("BUTTON ALERT ACTIVATED (3 in 5s).");
+          g_buttonActivated = true;
+          g_buttonPressCount = 0;
+        }
+      }
+      else {
+        Serial.println("Button RELEASED");
+        g_buttonHoldStartTime = 0;
+      }
+    }
+  }
+  g_lastButtonState = reading;
+  if (g_buttonPressCount > 0 && (currentMillis - g_firstPressTime > BUTTON_WINDOW_MS)) {
+    Serial.println("Button press window expired. Resetting count.");
+    g_buttonPressCount = 0;
+  }
+  if (g_buttonState == LOW && (currentMillis - g_buttonHoldStartTime >= BUTTON_RESET_HOLD_MS)) {
+    if (g_feverActivated || g_buttonActivated) {
+      Serial.println("15-SEC HOLD DETECTED. Resetting all alert flags.");
+      g_feverActivated = false;
+      g_buttonActivated = false;
+      pixels.setPixelColor(0, COLOR_GREEN); pixels.show(); delay(200);
+      pixels.setPixelColor(0, COLOR_BLACK); pixels.show(); delay(200);
+      pixels.setPixelColor(0, COLOR_GREEN); pixels.show(); delay(200);
+    }
+    g_buttonHoldStartTime = currentMillis; 
+  }
+}
+
+// =============================================================================
+//  OUTPUT FUNCTIONS (Unchanged)
+// =============================================================================
+
+void updateLEDStatus() {
+  if (WiFi.status() != WL_CONNECTED) {
+    pixels.setPixelColor(0, COLOR_RED);
+  } 
+  else if (g_feverActivated || g_buttonActivated) {
+    pixels.setPixelColor(0, COLOR_BLUE);
+  } 
+  else {
+    pixels.setPixelColor(0, COLOR_GREEN);
+  }
+  pixels.show();
+}
+
+void handleWebServer(float tempF) {
+  WiFiClient client = server.available();
+  if (client) {
+    String currentLine = "";
+    while (client.connected()) {
+      if (client.available()) {
+        char c = client.read();
+        if (c == '\n') {
+          if (currentLine.length() == 0) {
+            
+            String jsonPayload = "{";
+            jsonPayload += "\"patientID\": " + String(PATIENT_ID) + ", ";
+            
+            bool isPriming = (tempF == -9999.0);
+            
+            jsonPayload += "\"sensorError\": ";
+            jsonPayload += (isPriming ? "true" : "false");
+            jsonPayload += ", ";
+
+            if (isPriming) {
+              jsonPayload += "\"tempF\": null, ";
+            } else {
+              jsonPayload += "\"tempF\": " + String(tempF, 2) + ", ";
+            }
+
+            jsonPayload += "\"buttonCurrent\": ";
+            jsonPayload += (g_buttonState == LOW ? "true" : "false");
+            jsonPayload += ", ";
+
+            jsonPayload += "\"feverLatched\": ";
+            jsonPayload += (g_feverActivated ? "true" : "false");
+            jsonPayload += ", ";
+
+            jsonPayload += "\"buttonLatched\": ";
+            jsonPayload += (g_buttonActivated ? "true" : "false");
+
+            jsonPayload += "}";
+
+            client.println("HTTP/1.1 200 OK");
+            client.println("Content-type:application/json");
+            client.println("Connection: close");
+            client.println("Access-Control-Allow-Origin: *");
+            client.println();
+            client.println(jsonPayload);
+            
+            break;
+            
+          } else { currentLine = ""; }
+        } else if (c != '\r') { currentLine += c; }
+      }
+    }
+    client.stop();
+  }
+}
+
+// =============================================================================
+//  SENSOR READING (This is the modified function)
+// =============================================================================
+
+// Helper function for qsort
+int compareFloats(const void* a, const void* b) {
+  if (*(const float*)a < *(const float*)b) return -1;
+  if (*(const float*)a > *(const float*)b) return 1;
+  return 0;
+}
+
+float readAndPrintTemperature() {
+  // 1. Read raw value
+  int tempVal = analogRead(TEMP_PIN);
+  float volts = (tempVal / 4095.0) * 3.3;
+  float tempC = (volts - 0.5) * 100.0;
+  
+  // 2. Get the uncalibrated Fahrenheit value
+  float uncalibratedTempF = (tempC * 9.0 / 5.0) + 32.0;
+
+  // 3. Check for sensor error (HIGH *OR* LOW)
+  bool isError = (uncalibratedTempF > TEMP_MAX_READING_F) || (uncalibratedTempF < TEMP_MIN_READING_F);
+  
+  Serial.println("--- New Reading ---");
+  Serial.print("1. Raw Temperature (Uncalibrated): ");
+  Serial.print(uncalibratedTempF, 1);
+  Serial.println(" F");
+  
+  if (isError) {
+    Serial.println("IMPOSSIBLE READING (Out of 0-180F range). Rejecting.");
+    
+    if (!g_filterIsPrimed) {
+      return -9999.0; // Filter isn't ready, so send a startup error
+    } else {
+      return g_lastGoodMedian; // Filter is ready, so "coast" on the last good value
+    }
+  }
+
+  // 4. If we get here, the reading is VALID.
+  //    Apply the calibration offset.
+  float calibratedTempF = uncalibratedTempF - TEMP_F_OFFSET;
+  
+  // 5. Add the *final, calibrated* reading to the buffer.
+  g_tempReadings[g_readingCounter % TEMP_READING_COUNT] = calibratedTempF;
+  g_readingCounter++;
+
+  // 6. Check if the filter is ready to be used
+  if (g_readingCounter < TEMP_READING_COUNT) {
+    Serial.print("Priming filter... (");
+    Serial.print(g_readingCounter);
+    Serial.print("/");
+    Serial.print(TEMP_READING_COUNT);
+    Serial.println(")");
+    return -9999.0; // Not enough valid samples yet, send startup error
+  } 
+  
+  // 7. If we are here, the filter is FULL and we can get a median
+  if (!g_filterIsPrimed) {
+    Serial.println("Filter is now primed. Real data starting.");
+    g_filterIsPrimed = true; // Set this flag once
+  }
+
+  // 8. Create a sorted copy to find the median
+  float sortedReadings[TEMP_READING_COUNT];
+  for(int i=0; i < TEMP_READING_COUNT; i++) {
+    sortedReadings[i] = g_tempReadings[i];
+  }
+  
+  qsort(sortedReadings, TEMP_READING_COUNT, sizeof(float), compareFloats);
+
+  // 9. Get the median value
+  float medianTempF = sortedReadings[TEMP_READING_COUNT / 2];
+
+  Serial.print("3. Final Median Temp (Calibrated): ");
+  Serial.print(medianTempF, 1);
+  Serial.println(" F");
+
+  // These are always good to see
+  Serial.print("Button Status: ");
+  Serial.println((g_buttonState == LOW) ? "PRESSED" : "NOT PRESSED");
+  Serial.print("Fever Latch: "); Serial.print(g_feverActivated);
+  Serial.print(" | Button Latch: "); Serial.println(g_buttonActivated);
+
+  g_lastGoodMedian = medianTempF; // Store this as the new "last good value"
+  return medianTempF; // Return the stable median temperature
+}

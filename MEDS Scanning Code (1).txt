@@ -1,0 +1,947 @@
+import requests
+import time
+import os
+import threading
+import sys
+import math
+from flask import Flask, jsonify
+
+# --- RoboClaw Import ---
+import roboclaw_3
+
+# --- RPi.GPIO (For Ultrasonic) ---
+import RPi.GPIO as GPIO
+
+# --- IMU Imports ---
+try:
+    from adafruit_extended_bus import ExtendedI2C as I2C
+    from adafruit_bno055 import BNO055_I2C
+    IMU_AVAILABLE = True
+except ImportError:
+    print("IMU libraries not found. Turns will fail.")
+    IMU_AVAILABLE = False
+
+# --- Servo / GPIO Imports ---
+try:
+    from gpiozero import Servo, Device
+    from gpiozero.pins.pigpio import PiGPIOFactory
+    Device.pin_factory = PiGPIOFactory()
+    SERVO_AVAILABLE = True
+except Exception as e:
+    print(f"Servo Library Error: {e}")
+    SERVO_AVAILABLE = False
+
+# --- Hardware Libraries for OLED ---
+try:
+    import board
+    import adafruit_ssd1306
+    from PIL import Image, ImageDraw, ImageFont
+    OLED_AVAILABLE = True
+except ImportError:
+    OLED_AVAILABLE = False
+    print("OLED libraries not found. Display will be skipped.")
+
+# ==============================================================================
+# --- CONFIGURATION ---
+# ==============================================================================
+
+PATIENT_IPS = {
+    "Patient 1": "192.168.4.21",
+    "Patient 2": "192.168.4.22",
+}
+
+# --- Roboclaw Settings ---
+SERIAL_PORT = "/dev/serial0"
+BAUD_RATE = 38400
+RC_ADDRESS = 128
+
+# --- Robot Motion Parameters ---
+COUNTS_PER_FOOT = 389
+POSITION_TOLERANCE = 15       
+SPEED_NORMAL = 2300             
+SPEED_SLOW = 300
+ACCEL_RATE = 500
+DEFAULT_DECCEL_RATE = 500
+SLOW_DECCEL_RATE = 200
+
+# --- DISTANCE SETTINGS ---
+MAIN_HALLWAY_DIST = 40.5      
+INITIAL_APPROACH_DIST = 7.5   
+MAX_MISSION_DIST_FT = 13.0    
+PUSH_DETECTION_THRESHOLD_FT = 0.32 
+
+# --- SCANNING SETTINGS ---
+SWEEP_SPEED_QPPS = 200          
+MIN_CUP_DIST_FT = 0.3           
+MAX_CUP_DIST_FT = 5.0           
+DEFAULT_SWEEP_ANGLE = 35.0      
+SCAN_EDGE_OFFSET_DEG = 4.5      
+
+# --- IMU Turn Parameters ---
+MAX_SPEED_QPPS = 300   
+MIN_SPEED_QPPS = 50             
+ACCEL_QPPS = 150       
+
+# PI Control Parameters (IMU)
+KP = 2.0               
+KI = 0.05              
+I_MAX = 10              
+STOP_THRESHOLD = 0.05  
+
+# --- Turn Offsets ---
+TURN_OFFSET_P1_OUT = 0.0
+TURN_OFFSET_P1_RET = 1.5
+TURN_OFFSET_P2_OUT = 0.00
+TURN_OFFSET_P2_RET = 1.75
+
+# --- NEW: Alignment Offsets ---
+# 1. Correction after the 40ft drive
+MAIN_DRIVE_CORRECTION_OFFSET = 0.0 
+# 2. Correction after returning home (before next run)
+HOME_ALIGNMENT_OFFSET = 0.0
+
+# --- Ultrasonic Parameters ---
+GPIO_TRIGGER = 27
+GPIO_ECHO = 17
+SENSOR_HANDOFF_DIST_FT = 0.5    
+TOUCH_NUDGE_DIST_FT = 0.1       
+
+# --- Servo Parameters ---
+SERVO_PIN = 18
+SERVO_MOVE_TIME = 1.5
+SERVO_PAUSE_TIME = 1.0
+SERVO_SPEED = 1.0
+SERVO_MIN_PW = 500 / 1000000
+SERVO_MAX_PW = 2500 / 1000000
+
+# --- OLED Settings ---
+OLED_WIDTH = 128
+OLED_HEIGHT = 64
+OLED_I2C_ADDRESS = 0x3C 
+
+# --- Web Server Settings ---
+WEB_PORT = 5000 
+
+# ==============================================================================
+# --- GLOBAL STATE ---
+# ==============================================================================
+
+rc = roboclaw_3.Roboclaw(SERIAL_PORT, BAUD_RATE)
+sensor = None 
+
+system_data = {
+    "patients": {
+        "Patient 1": {
+            "status": "Offline", "tempF": 0.0, "sensorError": False,        
+            "buttonCurrent": False, "feverLatched": False, "buttonLatched": False
+        },
+        "Patient 2": {
+            "status": "Offline", "tempF": 0.0, "sensorError": False,        
+            "buttonCurrent": False, "feverLatched": False, "buttonLatched": False
+        }
+    },
+    "robot": { "status": "IDLE", "distance": 0.0, "current_mission": "None" },
+    "ignored_triggers": []
+}
+
+data_lock = threading.Lock()
+
+# ==============================================================================
+# --- WEB SERVER ---
+# ==============================================================================
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    return "<h1>Robot System Active</h1><p>Check /data for JSON stats.</p>"
+
+@app.route('/data')
+def get_data():
+    with data_lock:
+        return jsonify(system_data)
+
+# ==============================================================================
+# --- BACKGROUND THREAD: PATIENT MONITORING ---
+# ==============================================================================
+def poll_patients_loop():
+    print("Background Patient Monitor Started.")
+    while True:
+        for pname, ip in PATIENT_IPS.items():
+            try:
+                r = requests.get(f"http://{ip}", timeout=0.3)
+                d = r.json()
+                with data_lock:
+                    p = system_data['patients'][pname]
+                    p['status'] = "Online"
+                    raw_t = d.get('tempF')
+                    p['tempF'] = raw_t if raw_t is not None else 0.0
+                    p['sensorError'] = d.get('sensorError', False)
+                    p['buttonCurrent'] = d.get('buttonCurrent', False)
+                    p['feverLatched'] = d.get('feverLatched', False)
+                    p['buttonLatched'] = d.get('buttonLatched', False)
+            except:
+                with data_lock:
+                    system_data['patients'][pname]['status'] = "Offline"
+            time.sleep(0.1)
+
+# ==============================================================================
+# --- OLED FUNCTION ---
+# ==============================================================================
+def update_oled_master(oled_objs, line1_override=None, line2_override=None):
+    if not OLED_AVAILABLE or oled_objs is None: return
+    oled, draw, image, font = oled_objs
+
+    with data_lock:
+        p1 = system_data['patients']['Patient 1']
+        p2 = system_data['patients']['Patient 2']
+        dist = system_data['robot']['distance']
+        robot_st = system_data['robot']['status']
+        mission_target = system_data['robot']['current_mission']
+        ignored = system_data['ignored_triggers']
+
+    draw.rectangle((0, 0, oled.width, oled.height), outline=0, fill=0)
+
+    if robot_st == "IDLE" or robot_st == "HOME":
+        p1_txt = f"P1: {p1['tempF']:.1f}F " if p1['status'] == 'Online' else "P1: OFF "
+        p1_txt += "B:ON" if p1['buttonCurrent'] else "B:.."
+        p1_is_alerting = (p1['feverLatched'] and "P1_FEVER" not in ignored) or \
+                         (p1['buttonLatched'] and "P1_BUTTON" not in ignored)
+
+        if p1_is_alerting:
+            draw.rectangle((0, 0, oled.width, 12), outline=255, fill=255)
+            draw.text((2, 0), p1_txt + " !", font=font, fill=0)
+        else:
+            draw.text((2, 0), p1_txt, font=font, fill=255)
+
+        p2_txt = f"P2: {p2['tempF']:.1f}F " if p2['status'] == 'Online' else "P2: OFF "
+        p2_txt += "B:ON" if p2['buttonCurrent'] else "B:.."
+        p2_is_alerting = (p2['feverLatched'] and "P2_FEVER" not in ignored) or \
+                         (p2['buttonLatched'] and "P2_BUTTON" not in ignored)
+
+        if p2_is_alerting:
+            draw.rectangle((0, 14, oled.width, 26), outline=255, fill=255)
+            draw.text((2, 14), p2_txt + " !", font=font, fill=0)
+        else:
+            draw.text((2, 14), p2_txt, font=font, fill=255)
+        
+        draw.text((2, 32), "System Ready", font=font, fill=255)
+        draw.text((2, 48), f"Total: {dist:.2f} ft", font=font, fill=255)
+    
+    else:
+        draw.rectangle((0, 0, oled.width, 14), outline=255, fill=255)
+        draw.text((2, 1), f"MISSION: {mission_target}", font=font, fill=0)
+        
+        if line1_override:
+            draw.text((2, 18), line1_override, font=font, fill=255)
+            draw.text((2, 30), line2_override if line2_override else "", font=font, fill=255)
+        else:
+            draw.text((2, 18), f"Act: {robot_st}", font=font, fill=255)
+            draw.line((0, 32, 128, 32), fill=255)
+            draw.text((2, 40), "TOTAL DISTANCE:", font=font, fill=255)
+            draw.text((2, 52), f"> {dist:.2f} ft", font=font, fill=255)
+
+    oled.image(image)
+    oled.show()
+
+def show_error_screen(oled_objs, error_code):
+    if not OLED_AVAILABLE or oled_objs is None: return
+    oled, draw, image, font = oled_objs
+    draw.rectangle((0, 0, oled.width, oled.height), outline=0, fill=0)
+    draw.text((5, 20), "CRITICAL ERROR", font=font, fill=255)
+    draw.text((5, 35), f"CODE: {hex(error_code)}", font=font, fill=255)
+    oled.image(image)
+    oled.show()
+
+# ==============================================================================
+# --- IMU HELPER FUNCTIONS ---
+# ==============================================================================
+def setup_sensor():
+    if not IMU_AVAILABLE: return None
+    max_retries = 5
+    for attempt in range(max_retries):
+        try:
+            i2c = I2C(6) 
+            sensor = BNO055_I2C(i2c)
+            # Force IMU Mode (0X08) - Disable Magnetometer
+            sensor.mode = 0x08 
+            return sensor
+        except Exception as e:
+            print(f"Sensor Init Warning (Attempt {attempt+1}/{max_retries}): {e}")
+            time.sleep(0.5)
+    print("CRITICAL ERROR: Could not initialize BNO055.")
+    sys.exit(1)
+
+def get_heading():
+    """Basic fetch, used by internal loops."""
+    global sensor
+    try:
+        angles = sensor.euler
+        if angles is not None and angles[0] is not None:
+            return angles[0]
+    except OSError:
+        pass 
+    return None
+
+def get_averaged_heading(duration_sec=2.0, sample_delay=0.05):
+    """
+    Captures headings for a set duration, filters out None and suspicious 0.0s,
+    and returns the Vector Average.
+    IMPORTANT: MOTORS MUST BE STOPPED BEFORE CALLING THIS.
+    """
+    start_time = time.time()
+    readings = []
+    
+    print(f"Averaging heading for {duration_sec}s...")
+    
+    while (time.time() - start_time) < duration_sec:
+        h = get_heading()
+        if h is not None:
+            readings.append(h)
+        time.sleep(sample_delay)
+    
+    if not readings:
+        print("[WARNING] No valid IMU readings during average window.")
+        return 0.0 # Fallback
+    
+    non_zeros = [x for x in readings if abs(x) > 0.01]
+    
+    if len(non_zeros) > 0:
+        clean_readings = non_zeros
+    else:
+        clean_readings = readings
+
+    sum_sin = 0.0
+    sum_cos = 0.0
+    for angle in clean_readings:
+        rad = math.radians(angle)
+        sum_sin += math.sin(rad)
+        sum_cos += math.cos(rad)
+    
+    avg_sin = sum_sin / len(clean_readings)
+    avg_cos = sum_cos / len(clean_readings)
+    
+    avg_rad = math.atan2(avg_sin, avg_cos)
+    avg_deg = math.degrees(avg_rad)
+    
+    final_heading = (avg_deg + 360) % 360
+    
+    print(f"[DEBUG] Raw Avg Heading: {final_heading:.2f} (Samples: {len(clean_readings)})")
+    return final_heading
+
+def calculate_angle_diff(target, current):
+    diff = (target - current + 180) % 360 - 180
+    return diff
+
+def drive_motors(speed):
+    speed = int(speed)
+    rc.SpeedM1(RC_ADDRESS, speed)
+    rc.SpeedM2(RC_ADDRESS, -speed)
+
+def stop_motors():
+    rc.SpeedM1(RC_ADDRESS, 0)
+    rc.SpeedM2(RC_ADDRESS, 0)
+
+# ==============================================================================
+# --- ULTRASONIC FUNCTIONS ---
+# ==============================================================================
+def get_raw_distance_cm():
+    GPIO.output(GPIO_TRIGGER, True)
+    time.sleep(0.00001) 
+    GPIO.output(GPIO_TRIGGER, False)
+
+    StartTime = time.time()
+    StopTime = time.time()
+    
+    timeout_start = time.time()
+    while GPIO.input(GPIO_ECHO) == 0:
+        StartTime = time.time()
+        if time.time() - timeout_start > 0.06: 
+            return -1 
+
+    timeout_start = time.time()
+    while GPIO.input(GPIO_ECHO) == 1:
+        StopTime = time.time()
+        if time.time() - timeout_start > 0.06:
+            return -2 
+
+    TimeElapsed = StopTime - StartTime
+    distance = (TimeElapsed * 34300) / 2
+    return distance
+
+def get_single_distance_ft():
+    d_cm = get_raw_distance_cm()
+    if d_cm > 0 and d_cm < 400:
+        return d_cm * 0.0328084
+    return 999.0
+
+def get_stable_distance_ft():
+    readings = []
+    for _ in range(3):
+        d = get_single_distance_ft()
+        if d < 100: readings.append(d)
+        time.sleep(0.05)
+    if not readings: return 999.0
+    readings.sort()
+    return readings[len(readings)//2]
+
+# ==============================================================================
+# --- MOTION CONTROL ---
+# ==============================================================================
+def reset_encoders():
+    rc.SetEncM1(RC_ADDRESS, 0)
+    rc.SetEncM2(RC_ADDRESS, 0)
+    time.sleep(0.25) 
+
+def check_and_halt_on_error(oled_objs):
+    err = rc.ReadError(RC_ADDRESS)
+    if err[0] and err[1] != 0:
+        print(f"\n[CRITICAL] MOTOR ERROR: {hex(err[1])}")
+        stop_motors()
+        show_error_screen(oled_objs, err[1])
+        os._exit(1) 
+
+def perform_drive(oled_objs, target_feet, speed, start_global_dist, timeout_sec, deccel_rate=DEFAULT_DECCEL_RATE, use_preload=True):
+    target_counts = int(target_feet * COUNTS_PER_FOOT)
+    print(f"Driving {target_feet:.3f}ft (Timeout={timeout_sec}s)...")
+    update_oled_master(oled_objs, "DRIVING", f"{target_feet:.2f} ft")
+
+    if use_preload:
+        for attempt in range(3):
+            reset_encoders()
+            rc.SpeedAccelDeccelPositionM1(RC_ADDRESS, ACCEL_RATE, speed, deccel_rate, 0, 1)
+            rc.SpeedAccelDeccelPositionM2(RC_ADDRESS, ACCEL_RATE, speed, deccel_rate, 0, 1)
+            time.sleep(0.5)
+            err = rc.ReadError(RC_ADDRESS)
+            if not (err[0] and err[1] != 0):
+                break
+
+    reset_encoders()
+    rc.SpeedAccelDeccelPositionM1(RC_ADDRESS, ACCEL_RATE, speed, deccel_rate, target_counts, 0)
+    rc.SpeedAccelDeccelPositionM2(RC_ADDRESS, ACCEL_RATE, speed, deccel_rate, target_counts, 0)
+    
+    start_time = time.time()
+    
+    while True:
+        check_and_halt_on_error(oled_objs)
+        e1 = (0,0); e2 = (0,0)
+        for _ in range(3):
+            r1 = rc.ReadEncM1(RC_ADDRESS)
+            r2 = rc.ReadEncM2(RC_ADDRESS)
+            if r1[0] and r2[0]:
+                e1 = r1; e2 = r2
+                break
+        
+        if e1[0] and e2[0]:
+            current_pos_1 = e1[1]
+            current_pos_2 = e2[1]
+            avg_ticks = (abs(current_pos_1) + abs(current_pos_2)) / 2.0
+            current_dist_segment = avg_ticks / COUNTS_PER_FOOT
+            if target_feet < 0: current_dist_segment *= -1
+            
+            with data_lock:
+                system_data['robot']['distance'] = start_global_dist + current_dist_segment
+            
+            if (abs(target_counts - current_pos_1) < POSITION_TOLERANCE and 
+                abs(target_counts - current_pos_2) < POSITION_TOLERANCE):
+                return current_dist_segment
+        
+        if (time.time() - start_time) > timeout_sec:
+            print(f"Timeout. Stopping.")
+            if e1[0]:
+                dist = (abs(e1[1]) + abs(e2[1])) / 2.0 / COUNTS_PER_FOOT
+                return -dist if target_feet < 0 else dist
+            return 0.0
+        time.sleep(0.05) 
+
+def perform_turn(oled_objs, direction, offset_deg, base_angle=90.0):
+    if sensor is None: return
+    
+    # --- SAFETY STOP BEFORE SENSING ---
+    stop_motors()
+    time.sleep(1.0) # Allow Mag field to collapse and robot to settle
+
+    start_angle = None
+    while start_angle is None:
+        start_angle = get_heading()
+        time.sleep(0.05)
+    
+    target_val = base_angle + offset_deg
+    target_angle = (start_angle + (direction * target_val)) % 360.0
+    
+    update_oled_master(oled_objs, "TURNING", f"Tgt: {target_angle:.1f}")
+
+    integral_error = 0.0
+    turn_start_time = time.time()
+    TIMEOUT_SEC = 20.0 
+
+    last_enc_check_time = time.time()
+    rc.ReadEncM1(RC_ADDRESS) # flush
+    last_enc_val_1 = 0
+    last_enc_val_2 = 0
+
+    while True:
+        if (time.time() - turn_start_time) > TIMEOUT_SEC:
+            print("Turn Timeout! Stopping.")
+            break
+
+        current_angle = get_heading()
+        if current_angle is None: continue 
+
+        error = calculate_angle_diff(target_angle, current_angle)
+        
+        if abs(error) <= STOP_THRESHOLD:
+            stop_motors()
+            break
+        
+        if (time.time() - last_enc_check_time) > 0.5:
+            e1 = rc.ReadEncM1(RC_ADDRESS)
+            e2 = rc.ReadEncM2(RC_ADDRESS)
+            if e1[0] and e2[0]:
+                delta1 = abs(e1[1] - last_enc_val_1)
+                delta2 = abs(e2[1] - last_enc_val_2)
+                if (delta1 < 20 or delta2 < 20) and abs(error) > 5.0:
+                    print(f"[WARNING] Turn Stall Detected? Err: {error:.1f}deg.")
+                last_enc_val_1 = e1[1]
+                last_enc_val_2 = e2[1]
+            last_enc_check_time = time.time()
+
+        integral_error += error
+        if integral_error > I_MAX: integral_error = I_MAX
+        elif integral_error < -I_MAX: integral_error = -I_MAX
+
+        p_term = error * KP
+        i_term = integral_error * KI
+        target_speed = p_term + i_term
+        
+        move_dir = 1 if target_speed >= 0 else -1
+        abs_speed = abs(target_speed)
+
+        if abs_speed > MAX_SPEED_QPPS: abs_speed = MAX_SPEED_QPPS
+        elif abs_speed < MIN_SPEED_QPPS and abs(error) > STOP_THRESHOLD: abs_speed = MIN_SPEED_QPPS
+        
+        final_speed = abs_speed * move_dir
+        drive_motors(final_speed)
+        time.sleep(0.02)
+    
+    stop_motors()
+    time.sleep(1.0) # Wait for stop before logic continues
+    reset_encoders()
+
+def align_to_heading(oled_objs, target_heading):
+    if sensor is None: return
+    
+    # --- SAFETY STOP BEFORE SENSING ---
+    stop_motors()
+    time.sleep(1.0) # CRITICAL: Wait for stabilization
+
+    update_oled_master(oled_objs, "ALIGNING", f"To: {target_heading:.1f}")
+    print(f"Aligning to absolute heading: {target_heading:.1f}")
+    
+    current = None
+    for _ in range(10):
+        current = get_heading()
+        if current is not None: break
+        time.sleep(0.05)
+        
+    if current is None:
+        print("[WARNING] Skipping Alignment (IMU Error)")
+        return
+
+    error = calculate_angle_diff(target_heading, current)
+    
+    if abs(error) > 1.0:
+        direction = 1 if error >= 0 else -1
+        perform_turn(oled_objs, direction, 0, base_angle=abs(error))
+
+# ==============================================================================
+# --- CONTINUOUS SCAN LOGIC ---
+# ==============================================================================
+def perform_scan_sweep(oled_objs, sweep_angle):
+    # Safety stop
+    stop_motors()
+    time.sleep(1.0)
+
+    heading_before_op = get_averaged_heading(duration_sec=0.5)
+        
+    print(f"\n[DEBUG] Moving to Scan Start (-{sweep_angle} deg)...")
+    perform_turn(oled_objs, -1, 0, base_angle=sweep_angle)
+    
+    # Safety stop after turn
+    stop_motors()
+    time.sleep(0.5)
+
+    start_heading = get_averaged_heading(duration_sec=0.5)
+    
+    end_heading_target = (start_heading + (sweep_angle * 2)) % 360
+    print(f"[DEBUG] Sweeping from {start_heading:.1f} to {end_heading_target:.1f}...")
+    update_oled_master(oled_objs, "SCANNING", f"+/- {sweep_angle} deg")
+    
+    scan_data = [] 
+    drive_motors(SWEEP_SPEED_QPPS) 
+    sweep_start_time = time.time()
+    
+    while True:
+        if (time.time() - sweep_start_time) > 15.0:
+            stop_motors(); print("[DEBUG] Sweep Timeout"); break
+        current_heading = get_heading()
+        if current_heading is None: continue
+        
+        diff_from_start = (current_heading - start_heading + 360) % 360
+        
+        if diff_from_start >= (sweep_angle * 2) and diff_from_start < 300: 
+            stop_motors(); break
+            
+        dist = get_single_distance_ft()
+        
+        if MIN_CUP_DIST_FT < dist < MAX_CUP_DIST_FT:
+            print(f"[DEBUG] HIT ACCEPTED! Angle: {diff_from_start:.1f} | Dist: {dist:.2f}") 
+            scan_data.append((diff_from_start, dist))
+        
+        time.sleep(0.01)
+        
+    stop_motors()
+    time.sleep(0.5)
+    
+    print(f"[DEBUG] Scan Complete. Raw Points Found: {len(scan_data)}")
+
+    if not scan_data:
+        print("[DEBUG] No valid targets found.")
+        perform_turn(oled_objs, -1, 0, base_angle=sweep_angle)
+        return False, 0, 0
+        
+    global_min_dist = min(d for a, d in scan_data)
+    cutoff_threshold = global_min_dist + 1.0
+    
+    filtered_data = [p for p in scan_data if p[1] <= cutoff_threshold]
+    
+    if not filtered_data:
+        perform_turn(oled_objs, -1, 0, base_angle=sweep_angle)
+        return False, 0, 0
+
+    clusters = []
+    current_cluster = [filtered_data[0]]
+    
+    for i in range(1, len(filtered_data)):
+        angle_diff = abs(filtered_data[i][0] - filtered_data[i-1][0])
+        if angle_diff < 5.0:
+            current_cluster.append(filtered_data[i])
+        else:
+            clusters.append(current_cluster)
+            current_cluster = [filtered_data[i]]
+    clusters.append(current_cluster)
+    
+    valid_clusters = [c for c in clusters if len(c) >= 3]
+    if not valid_clusters:
+        print("[DEBUG] No significant clusters found.")
+        perform_turn(oled_objs, -1, 0, base_angle=sweep_angle)
+        return False, 0, 0
+        
+    best_cluster = max(valid_clusters, key=len)
+    
+    angles = [p[0] for p in best_cluster]
+    dists = [p[1] for p in best_cluster]
+    
+    min_angle = min(angles)
+    max_angle = max(angles)
+    geometric_center = (min_angle + max_angle) / 2.0
+    avg_dist = sum(dists) / len(dists)
+    
+    center_sweep_angle = geometric_center + SCAN_EDGE_OFFSET_DEG
+    absolute_center_heading = (start_heading + center_sweep_angle) % 360
+    
+    print(f"[DEBUG] Aligning to Absolute Center Heading: {absolute_center_heading:.1f}")
+    align_to_heading(oled_objs, absolute_center_heading)
+    
+    net_turn = calculate_angle_diff(absolute_center_heading, heading_before_op)
+    
+    return True, net_turn, avg_dist
+
+# ==============================================================================
+# --- SMART APPROACH LOGIC ---
+# ==============================================================================
+def smart_cup_approach(oled_objs, start_global_dist, initial_abs_heading):
+    print("--- STARTING SMART APPROACH (FAST SWEEP) ---")
+    
+    approach_log = [] 
+    local_added_dist = 0.0
+
+    def drive_and_log(dist, speed=SPEED_SLOW, deccel=DEFAULT_DECCEL_RATE, preload=True):
+        nonlocal local_added_dist
+        actual = perform_drive(oled_objs, dist, speed, 
+                               start_global_dist + local_added_dist, 
+                               timeout_sec=10, deccel_rate=deccel, use_preload=preload)
+        local_added_dist += actual
+        approach_log.append(('DRIVE', actual))
+        # Ensure full stop before next logic step
+        stop_motors()
+        time.sleep(0.5)
+        return actual
+
+    def retreat_to_start():
+        nonlocal local_added_dist
+        print(f"LIMIT HIT! Retreating...")
+        if len(approach_log) > 1: 
+            moves_to_undo = approach_log[1:]
+            for action, value in reversed(moves_to_undo):
+                if action == 'DRIVE':
+                    perform_drive(oled_objs, -value, SPEED_NORMAL, 0, timeout_sec=10, deccel_rate=SLOW_DECCEL_RATE, use_preload=False)
+                elif action == 'TURN':
+                    rev_dir = -1 if value > 0 else 1
+                    rev_deg = abs(value)
+                    perform_turn(oled_objs, rev_dir, 0, base_angle=rev_deg)
+            del approach_log[1:] 
+            local_added_dist = INITIAL_APPROACH_DIST 
+        
+        print("Retreat Done. Re-aligning to initial Heading to fix drift...")
+        align_to_heading(oled_objs, initial_abs_heading)
+
+    print(f"Moving into search zone ({INITIAL_APPROACH_DIST}ft)...")
+    drive_and_log(INITIAL_APPROACH_DIST, SPEED_NORMAL, SLOW_DECCEL_RATE, preload=True)
+
+    cup_locked = False
+    last_valid_dist = 0.0
+
+    while True:
+        if local_added_dist > MAX_MISSION_DIST_FT:
+            retreat_to_start(); cup_locked = False; continue
+
+        if not cup_locked:
+            print(f"Attempting {DEFAULT_SWEEP_ANGLE} deg sweep...")
+            success, net_turn, est_dist = perform_scan_sweep(oled_objs, DEFAULT_SWEEP_ANGLE)
+            
+            if success:
+                print(f"Locked on Cup at {est_dist:.2f}ft.")
+                approach_log.append(('TURN', net_turn))
+                cup_locked = True
+                last_valid_dist = est_dist
+                
+                if est_dist > 2.0:
+                    drive_dist = est_dist * 0.75
+                    print(f"Fast Approach: {drive_dist:.2f}ft")
+                    drive_and_log(drive_dist, SPEED_NORMAL, SLOW_DECCEL_RATE, preload=True)
+                    check_dist = get_stable_distance_ft()
+                    print(f"Post-Approach Check: {check_dist:.2f}ft")
+                    if check_dist < 0.6: 
+                        print("Target extremely close! Skipping re-scan.")
+                        last_valid_dist = check_dist
+                        continue
+                    print("Fast approach done. Re-locking...")
+                    cup_locked = False; continue
+                else:
+                    print("Short Range Detected. Entering Final Approach.")
+                    continue
+            else:
+                print("Scan Failed. Retreating 2ft to reset...")
+                drive_and_log(-2.0, SPEED_NORMAL, preload=True)
+                align_to_heading(oled_objs, initial_abs_heading)
+                continue
+
+        current_dist = get_stable_distance_ft()
+        
+        if current_dist <= SENSOR_HANDOFF_DIST_FT:
+            print("Threshold Hit. Final Push.")
+            final_drive = current_dist + TOUCH_NUDGE_DIST_FT
+            drive_and_log(final_drive, SPEED_SLOW, SLOW_DECCEL_RATE, preload=False)
+            break 
+
+        if current_dist > (last_valid_dist + 1.5) or current_dist > MAX_CUP_DIST_FT:
+            print(f"Lost Tracking ({current_dist:.2f}). Retreating 2ft & Rescanning.")
+            drive_and_log(-2.0, SPEED_NORMAL, preload=True) 
+            stop_motors(); cup_locked = False; continue
+
+        last_valid_dist = current_dist
+        step = current_dist - SENSOR_HANDOFF_DIST_FT - 0.1 
+        if step < 0.1: step = 0.1 
+        
+        print(f"Final Inch Logic: Step {step:.2f}ft")
+        dist_before = current_dist
+        drive_and_log(step, SPEED_SLOW, SLOW_DECCEL_RATE, preload=False)
+        dist_after = get_stable_distance_ft()
+        
+        actual_drop = dist_before - dist_after
+        if step >= 0.4 and actual_drop < PUSH_DETECTION_THRESHOLD_FT:
+            print("Pushing Detected. Stopping and Rescanning.")
+            stop_motors(); cup_locked = False; continue
+            
+        time.sleep(0.05)
+
+    return local_added_dist, approach_log
+
+# ==============================================================================
+# --- SERVO ROUTINES ---
+# ==============================================================================
+def run_servo_routine(trigger_type, oled_objs):
+    if not SERVO_AVAILABLE: return
+    update_oled_master(oled_objs, "ACTION", "Dispensing")
+    try:
+        servo = Servo(SERVO_PIN, min_pulse_width=SERVO_MIN_PW, max_pulse_width=SERVO_MAX_PW)
+        def forward():
+            servo.value = SERVO_SPEED; time.sleep(SERVO_MOVE_TIME)
+            servo.mid(); time.sleep(SERVO_PAUSE_TIME)
+        def reverse():
+            servo.value = -SERVO_SPEED; time.sleep(SERVO_MOVE_TIME)
+            servo.mid(); time.sleep(SERVO_PAUSE_TIME)
+        if trigger_type == "FEVER":
+            for i in range(2): forward(); reverse()
+        elif trigger_type == "BUTTON":
+            for i in range(2): reverse(); forward()
+        servo.close()
+    except Exception as e: print(f"Servo Error: {e}")
+
+# ==============================================================================
+# --- MISSION EXECUTION ---
+# ==============================================================================
+def execute_mission(oled_objs, patient_id, trigger_type):
+    print(f"\n--- MISSION START: P{patient_id} [{trigger_type}] ---")
+    
+    if patient_id == 1:
+        forward_turn_dir = 1
+        outbound_offset = TURN_OFFSET_P1_OUT
+        return_offset   = TURN_OFFSET_P1_RET
+    else:
+        forward_turn_dir = -1
+        outbound_offset = TURN_OFFSET_P2_OUT
+        return_offset   = TURN_OFFSET_P2_RET
+    
+    with data_lock:
+        current_total = system_data['robot']['distance']
+        system_data['robot']['status'] = "DRIVING"
+        system_data['robot']['current_mission'] = f"P{patient_id}-{trigger_type}"
+    
+    # --- STEP 1: CAPTURE HEADING (STOPPED) ---
+    stop_motors()
+    time.sleep(1.0) # Ensure no motion/noise
+    start_mission_heading = get_averaged_heading(duration_sec=3.0)
+    print(f"Start Heading Locked: {start_mission_heading:.2f}")
+
+    # --- STEP 2: MAIN DRIVE (BLIND) ---
+    d = perform_drive(oled_objs, MAIN_HALLWAY_DIST, SPEED_NORMAL, current_total, timeout_sec=22)
+    current_total += d
+    
+    # --- STEP 3: CORRECTIVE TURN (Fix Drift) ---
+    stop_motors()
+    time.sleep(1.0) # Ensure we are stopped before checking alignment
+    correction_target = (start_mission_heading + MAIN_DRIVE_CORRECTION_OFFSET) % 360
+    print(f"Correcting Heading after drive. Target: {correction_target:.1f} (Start: {start_mission_heading:.1f})")
+    align_to_heading(oled_objs, correction_target)
+
+    # --- STEP 4: MAIN TURN ---
+    with data_lock: system_data['robot']['status'] = "TURNING"
+    perform_turn(oled_objs, forward_turn_dir, outbound_offset, base_angle=90.0)
+    
+    # 5. Capture Heading for Room Entry
+    stop_motors()
+    time.sleep(1.0)
+    room_entry_heading = get_averaged_heading(duration_sec=1.0)
+
+    # 6. Smart Approach
+    with data_lock: system_data['robot']['status'] = "SEARCHING"
+    added_dist, approach_history = smart_cup_approach(oled_objs, current_total, room_entry_heading)
+    current_total += added_dist
+    
+    # 7. Interaction
+    with data_lock: system_data['robot']['status'] = "SERVO ACT"; system_data['robot']['distance'] = current_total
+    run_servo_routine(trigger_type, oled_objs)
+
+    # 8. Return (Retrace with Drift Correction)
+    print("--- RETURNING HOME (RETRACING) ---")
+    with data_lock: system_data['robot']['status'] = "BACKING UP"
+    
+    for action, value in reversed(approach_history):
+        if action == 'DRIVE':
+            if abs(value) > 5.0:
+                print(f"[DEBUG] Long Drive Detected. Aligning to Room Heading: {room_entry_heading:.2f}")
+                align_to_heading(oled_objs, room_entry_heading)
+            
+            d = perform_drive(oled_objs, -value, SPEED_NORMAL, current_total, timeout_sec=10, deccel_rate=SLOW_DECCEL_RATE, use_preload=False)
+            current_total += d
+            stop_motors()
+            time.sleep(0.5)
+
+        elif action == 'TURN':
+            rev_direction = -1 if value > 0 else 1
+            rev_degrees = abs(value)
+            perform_turn(oled_objs, rev_direction, 0, base_angle=rev_degrees)
+
+    with data_lock: system_data['robot']['status'] = "TURNING"
+    reverse_turn_dir = -forward_turn_dir
+    perform_turn(oled_objs, reverse_turn_dir, return_offset, base_angle=90.0)
+
+    with data_lock: system_data['robot']['status'] = "RETURNING"
+    
+    d = perform_drive(oled_objs, -MAIN_HALLWAY_DIST, SPEED_NORMAL, current_total, timeout_sec=22)
+    current_total += d
+    
+    # --- FINAL HOME ALIGNMENT ---
+    print("Mission Complete. Aligning to HOME HEADING for next run...")
+    stop_motors()
+    time.sleep(1.0)
+    final_home_target = (start_mission_heading + HOME_ALIGNMENT_OFFSET) % 360
+    align_to_heading(oled_objs, final_home_target)
+
+    with data_lock: system_data['robot']['status'] = "HOME"; system_data['robot']['current_mission'] = "None"; system_data['robot']['distance'] = current_total
+
+    stop_motors()
+    time.sleep(2.0) 
+
+# ==============================================================================
+# --- MAIN ---
+# ==============================================================================
+if __name__ == "__main__":
+    GPIO.setwarnings(False); GPIO.setmode(GPIO.BCM)
+    GPIO.setup(GPIO_TRIGGER, GPIO.OUT); GPIO.setup(GPIO_ECHO, GPIO.IN)
+    
+    oled_objs = None
+    if OLED_AVAILABLE:
+        try:
+            i2c = board.I2C()
+            oled = adafruit_ssd1306.SSD1306_I2C(OLED_WIDTH, OLED_HEIGHT, i2c, addr=OLED_I2C_ADDRESS)
+            image = Image.new("1", (oled.width, oled.height))
+            draw = ImageDraw.Draw(image)
+            font = ImageFont.load_default()
+            oled_objs = (oled, draw, image, font)
+        except Exception as e: print(f"OLED Error: {e}")
+    
+    print("Initializing IMU...")
+    sensor = setup_sensor()
+    
+    if sensor: 
+        print("BNO055 Connected (IMU Mode). Warming up...")
+        time.sleep(2.0) 
+
+    if not rc.Open(): print("CRITICAL: Could not open RoboClaw."); sys.exit(1)
+    
+    rc.ReadEncM1(RC_ADDRESS); rc.ReadEncM2(RC_ADDRESS); rc.ReadMainBatteryVoltage(RC_ADDRESS)
+    time.sleep(0.5) 
+
+    w_thread = threading.Thread(target=lambda: app.run(host='0.0.0.0', port=WEB_PORT, debug=False), daemon=True)
+    w_thread.start()
+    p_thread = threading.Thread(target=poll_patients_loop, daemon=True)
+    p_thread.start()
+
+    print("System READY. Monitoring Patients...")
+    
+    try:
+        while True:
+            active_pid = None; active_trigger = None
+            with data_lock:
+                p1 = system_data['patients']['Patient 1']; p2 = system_data['patients']['Patient 2']
+                ignored = system_data['ignored_triggers']
+                if p1['feverLatched'] and "P1_FEVER" not in ignored: active_pid = 1; active_trigger = "FEVER"
+                elif p1['buttonLatched'] and "P1_BUTTON" not in ignored: active_pid = 1; active_trigger = "BUTTON"
+                if not active_pid:
+                    if p2['feverLatched'] and "P2_FEVER" not in ignored: active_pid = 2; active_trigger = "FEVER"
+                    elif p2['buttonLatched'] and "P2_BUTTON" not in ignored: active_pid = 2; active_trigger = "BUTTON"
+
+            if active_pid:
+                execute_mission(oled_objs, active_pid, active_trigger)
+                trigger_key = f"P{active_pid}_{active_trigger}"
+                print(f"Adding {trigger_key} to Ignore List.")
+                with data_lock: system_data['ignored_triggers'].append(trigger_key)
+
+            update_oled_master(oled_objs)
+            time.sleep(0.1) 
+    except KeyboardInterrupt:
+        print("\nShutting Down.")
+        stop_motors()
+        GPIO.cleanup()
