@@ -43,22 +43,6 @@
         
         h2 { color: var(--primary-color); font-size: 2rem; border-left: 5px solid var(--gold); padding-left: 1rem; margin-bottom: 1.5rem; }
         p { color: #374151; margin-bottom: 1.5rem; font-size: 1.1rem; }
-        
-        /* Lists */
-        ul.takeaways { list-style: none; padding-left: 0; }
-        ul.takeaways li { 
-            position: relative; 
-            padding-left: 1.5rem; 
-            margin-bottom: 1rem; 
-            color: #4b5563;
-        }
-        ul.takeaways li::before {
-            content: "✓";
-            position: absolute;
-            left: 0;
-            color: var(--gold);
-            font-weight: bold;
-        }
 
         /* IMAGE STYLES */
         .grid-gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 2rem; margin-top: 2rem; }
@@ -108,20 +92,27 @@
         .stat-number { display: block; font-size: 2.2rem; font-weight: bold; color: var(--primary-color); }
         .stat-label { font-size: 0.85rem; color: var(--text-light); text-transform: uppercase; letter-spacing: 1px; }
 
-        /* Code Block */
-        .code-snippet {
-            background: #2d2d2d;
-            color: #ccc;
-            padding: 1.5rem;
+        /* TEAM SECTION STYLES - Highlighted */
+        .team-container {
+            background-color: #fffbeb; /* Light Gold Tint */
+            border: 1px solid var(--gold);
+            padding: 2rem;
             border-radius: 8px;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 0.9rem;
-            overflow-x: auto;
-            margin: 2rem 0;
-            text-align: left;
+            margin-top: 2rem;
+            text-align: center;
         }
+        .team-links { display: flex; justify-content: center; gap: 2rem; flex-wrap: wrap; margin-top: 1rem; }
+        .team-member { 
+            color: var(--primary-color); 
+            font-weight: bold; 
+            font-size: 1.1rem;
+            text-decoration: none;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+        .team-member:hover { border-bottom: 2px solid var(--gold); }
 
-        /* DOCUMENT LINKS */
+        /* CODE & DOCS */
         .resource-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -142,11 +133,9 @@
             text-align: center;
         }
         .doc-btn:hover { background: var(--primary-color); color: white; border-color: var(--primary-color); }
-
-        /* Team Section */
-        .team-links { display: flex; justify-content: center; gap: 1.5rem; flex-wrap: wrap; margin-top: 1rem; }
-        .team-member { color: var(--text-light); border-bottom: 1px dotted var(--text-light); transition: color 0.2s; }
-        .team-member:hover { color: var(--primary-color); border-bottom: 1px solid var(--primary-color); }
+        
+        .code-btn { background-color: #e0f2fe; color: #0284c7; border-color: #bae6fd; }
+        .code-btn:hover { background-color: #0284c7; color: white; }
 
         @media (max-width: 768px) {
             .project-hero { padding: 3rem 1rem; }
@@ -178,7 +167,7 @@
 
         <div class="section-block">
             <h2>The Challenge</h2>
-            <p>For our Senior Design Capstone, our team designed, built, and validated the Medical Express Delivery System (MEDS). The objective was to create an autonomous robot (1 ft × 1 ft, 17 lbs) capable of navigating a hospital environment, detecting "patient" distress signals via wearable sensors, and dispensing medication.</p>
+            <p>For our Senior Design Capstone, our team designed, built, and validated the Medical Express Delivery System (MEDS). The objective was to create an autonomous robot (1 ft × 1 ft) capable of navigating a hospital environment, detecting "patient" distress signals via wearable sensors, and dispensing medication.</p>
             
             <div style="text-align: center; margin-top: 2rem; margin-bottom: 2rem;">
                 <img src="fullproduct.jpg" alt="Complete MEDS System" class="feature-img">
@@ -201,11 +190,30 @@
                     <span class="stat-label">Collisions</span>
                 </div>
             </div>
+
+            <div class="team-container">
+                <h3 style="margin-top: 0; color: var(--text-dark);">The Project Team</h3>
+                <p style="margin-bottom: 1rem;">This project was a collaborative effort. Our ability to set clear expectations and work in parallel was the foundation of our success.</p>
+                <div class="team-links">
+                    <a href="https://www.linkedin.com/in/leah-kern/" target="_blank" class="team-member">Leah Kern</a>
+                    <a href="https://www.linkedin.com/in/athena-archuleta-a59312231/" target="_blank" class="team-member">Athena Archuleta</a>
+                    <a href="https://www.linkedin.com/in/stevenvn/" target="_blank" class="team-member">Steven Vanden Noven</a>
+                    <a href="https://www.linkedin.com/in/megan-oconnor-nd/" target="_blank" class="team-member">Megan O'Connor</a>
+                </div>
+            </div>
         </div>
 
         <div class="section-block">
             <h2>Electrical & Systems Architecture</h2>
-            <p>I led the electrical integration for the system. The robot features a Raspberry Pi 4 acting as the central brain, communicating with a RoboClaw motor controller and an Arduino Nano for the delivery mechanism. The wearable utilizes an ESP32 for WiFi communication, enabling patients to trigger the robot via a button press or automatic fever detection.</p>
+            <p>As the electrical lead, I designed a centralized control architecture powered by a <strong>Raspberry Pi 4B</strong>. Unlike simpler microcontroller-based robots, the Pi allowed us to run a full operating system to handle complex networking and multi-threading tasks.</p>
+            <p>The Pi acts as a <strong>WiFi Hotspot</strong>, creating a dedicated local network. The patient wearable devices (powered by <strong>ESP32</strong> microcontrollers) connect directly to this network to transmit real-time biometric data (temperature and button presses) via JSON packets. This eliminated the need for external hospital WiFi infrastructure.</p>
+            <p>On the robot side, the Pi interfaces with:</p>
+            <ul>
+                <li><strong>RoboClaw Motor Controller:</strong> For precise PID control of the high-torque drive motors.</li>
+                <li><strong>BNO055 IMU:</strong> For absolute heading (yaw) data to ensure straight travel and precise 90-degree turns.</li>
+                <li><strong>Ultrasonic Sensors:</strong> For obstacle detection and the "docking search" algorithm.</li>
+                <li><strong>OLED Display:</strong> To output real-time system status, current state, and distance traveled for debugging.</li>
+            </ul>
             
             <div class="grid-gallery">
                 <div class="gallery-item">
@@ -220,54 +228,41 @@
         </div>
 
         <div class="section-block">
-            <h2>Mechanical Integration</h2>
-            <p>The robot utilized traction wheels in the back and omni wheels in the front, allowing for precise skid steering. For the medication hand-off, we designed a custom rack-and-pinion mechanism that extended the medication cup to the "Koozie" docking station, ensuring precise delivery without spillage.</p>
+            <h2>Software Architecture & Algorithms</h2>
+            <p>I developed the robot's control stack using <strong>Python</strong>. The complexity of handling network traffic while simultaneously driving the motors required a <strong>multi-threaded architecture</strong>.</p>
+            
+            <h3>1. Threading & Networking</h3>
+            <p>Thread 1 runs a <strong>Flask Web Server</strong> that listens for incoming HTTP POST requests from the wearables. Thread 2 runs the main navigation loop. This separation ensures that a delay in network traffic never causes the robot to "stutter" or miss a sensor reading.</p>
+
+            <h3>2. Navigation & Sensor Fusion</h3>
+            <p>The robot uses a sensor fusion approach for navigation. It combines encoder data (odometry) to measure distance traveled with data from the <strong>BNO055 IMU</strong> to correct for drift. If the robot hits a bump and veers slightly left, the IMU detects the yaw change, and the PID loop automatically increases power to the left wheels to correct the heading.</p>
+
+            <h3>3. Ultrasonic Docking Search</h3>
+            <p>Precision docking was critical. I implemented a "Search" state where, if the robot arrives at the patient room but does not detect the docking station (the Koozie) immediately, it enters a sweeping scan mode. It utilizes the front-mounted ultrasonic sensor to sweep for the specific geometric profile of the Koozie before initiating the pill dispensing sequence.</p>
+
+            <div style="margin-top: 3rem; background: #2d2d2d; padding: 2rem; border-radius: 8px;">
+                <h3 style="color: white; margin-top: 0;">Source Code Repository</h3>
+                <p style="color: #ccc; margin-bottom: 1.5rem;">Review the actual source code deployed on the robot and wearables.</p>
+                <div class="resource-grid">
+                    <a href="scanning_code.txt" target="_blank" class="doc-btn code-btn">💻 Main Navigation & Scanning</a>
+                    <a href="no_sensors_run.txt" target="_blank" class="doc-btn code-btn">💻 Dead Reckoning Logic</a>
+                    <a href="wearable_code.txt" target="_blank" class="doc-btn code-btn">⌚ ESP32 Wearable Firmware</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="section-block">
+            <h2>Mechanical Integration & Prototyping</h2>
+            <p>The mechanical design supported the electrical needs. We utilized a skid-steering drivetrain for zero-radius turning, allowing agility in tight hospital corridors. We validated this design early using a MATLAB trade study to ensure our motors provided sufficient torque.</p>
             
             <div class="grid-gallery">
                 <div class="gallery-item">
                     <img src="fullcad.png" alt="Full Robot CAD" class="gallery-img">
-                    <div class="caption">SolidWorks Assembly of the drivetrain and LIDAR tower.</div>
+                    <div class="caption">SolidWorks Assembly including LIDAR tower and electronics bay.</div>
                 </div>
-                
-                <div class="gallery-item">
-                    <img src="pilldispenser.png" alt="Rack and Pinion Mechanism" class="gallery-img">
-                    <div class="caption">Detail view of the custom Rack-and-Pinion medication dispenser.</div>
-                </div>
-            </div>
-        </div>
-
-        <div class="section-block">
-            <h2>Software Architecture: "The Brain"</h2>
-            <p>This was the most complex technical challenge. I developed the control software using <strong>Python</strong> on the Raspberry Pi. The system utilized multi-threading to handle competing tasks: one thread managed the <strong>Flask web server</strong> for WiFi communication with patient wearables, while another thread handled sensor polling and navigation logic.</p>
-
-            <div class="code-snippet">
-# Python Threading for Simultaneous Patient Monitoring
-w_thread = threading.Thread(target=lambda: app.run(host='0.0.0.0', port=WEB_PORT), daemon=True)
-w_thread.start()
-
-p_thread = threading.Thread(target=poll_patients_loop, daemon=True)
-p_thread.start()
-
-print("System READY. Monitoring Patients...")
-
-# Logic to prioritize 'Fever' signals over standard button presses
-if p1['feverLatched'] and "P1_FEVER" not in ignored: 
-    active_pid = 1; active_trigger = "FEVER"
-            </div>
-        </div>
-
-        <div class="section-block">
-            <h2>Prototyping & Iteration</h2>
-            <p>We followed a rigorous design-build-test cycle. Early prototypes focused on validating the ESP32 WiFi communication range and the torque requirements for the drivetrain. Starting prototyping early with low-cost materials (cardboard and basic 3D prints) allowed us to catch integration errors weeks before the final deadline.</p>
-            
-            <div class="grid-gallery">
                 <div class="gallery-item">
                     <img src="robotprototype.jpg" alt="Early Robot Chassis" class="gallery-img">
-                    <div class="caption">Initial chassis testing and electronics fit-check.</div>
-                </div>
-                <div class="gallery-item">
-                    <img src="wearableprototype.png" alt="Wearable Prototype" class="gallery-img">
-                    <div class="caption">Breadboarding the patient wearable sensor array.</div>
+                    <div class="caption">Prototyping chassis to validate component fitment.</div>
                 </div>
                 <div class="gallery-item">
                     <img src="workingrobot.png" alt="Robot Validation" class="gallery-img">
@@ -277,36 +272,15 @@ if p1['feverLatched'] and "P1_FEVER" not in ignored:
         </div>
 
         <div class="section-block">
-            <h2>Project Management & Key Takeaways</h2>
-            <p>Our success was built on clear communication and parallel workflow. By setting clear expectations for each subsystem owner, we avoided the "integration hell" common in capstone projects.</p>
-            
-            <ul class="takeaways">
-                <li><strong>Internal Deadlines:</strong> Kept the group ahead of schedule, allowing for extensive testing time.</li>
-                <li><strong>Trade Studies:</strong> Mathematical modeling (MATLAB) guided our motor selection, preventing costly hardware pivots later.</li>
-                <li><strong>Simplicity Wins:</strong> We prioritized robust, simple solutions over complex ones, resulting in a 4.7/5 manufacturing quality score.</li>
-            </ul>
-
-            <div style="text-align: center; margin-top: 2rem;">
-                <p style="font-weight: bold; color: var(--primary-color);">The Team</p>
-                <div class="team-links">
-                    <a href="https://www.linkedin.com/in/leah-kern/" target="_blank" class="team-member">Leah Kern</a>
-                    <a href="https://www.linkedin.com/in/athena-archuleta-a59312231/" target="_blank" class="team-member">Athena Archuleta</a>
-                    <a href="https://www.linkedin.com/in/stevenvn/" target="_blank" class="team-member">Steven Vanden Noven</a>
-                    <a href="https://www.linkedin.com/in/megan-oconnor-nd/" target="_blank" class="team-member">Megan O'Connor</a>
-                </div>
-            </div>
-        </div>
-
-        <div class="section-block">
             <h2>Technical Resources & Documentation</h2>
             <p>Download the full engineering documentation for a deeper dive into the system design and validation.</p>
             
             <div class="resource-grid">
-                <a href="Final Project_Group 2.pdf" target="_blank" class="doc-btn">📄 Final Paper</a>
-                <a href="Drivetrain_Trade_Study (1).pdf" target="_blank" class="doc-btn">📊 Trade Study</a>
                 <a href="designproposal.pdf" target="_blank" class="doc-btn">📝 Design Proposal</a>
+                <a href="Drivetrain_Trade_Study (1).pdf" target="_blank" class="doc-btn">📊 Trade Study</a>
                 <a href="Design Specifications_revC.docx" target="_blank" class="doc-btn">📋 Design Specs</a>
                 <a href="BOM.xlsx" target="_blank" class="doc-btn">🧾 Bill of Materials</a>
+                <a href="#" target="_blank" class="doc-btn video-btn">▶️ Watch Trial Video</a>
             </div>
         </div>
 
