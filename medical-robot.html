@@ -42,7 +42,24 @@
         .section-block:last-child { border-bottom: none; }
         
         h2 { color: var(--primary-color); font-size: 2rem; border-left: 5px solid var(--gold); padding-left: 1rem; margin-bottom: 1.5rem; }
+        h3 { color: var(--text-dark); margin-top: 2rem; margin-bottom: 0.5rem; }
         p { color: #374151; margin-bottom: 1.5rem; font-size: 1.1rem; }
+        
+        /* Lists */
+        ul.takeaways { list-style: none; padding-left: 0; }
+        ul.takeaways li { 
+            position: relative; 
+            padding-left: 1.5rem; 
+            margin-bottom: 1rem; 
+            color: #4b5563;
+        }
+        ul.takeaways li::before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: var(--gold);
+            font-weight: bold;
+        }
 
         /* IMAGE STYLES */
         .grid-gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 2rem; margin-top: 2rem; }
@@ -92,7 +109,7 @@
         .stat-number { display: block; font-size: 2.2rem; font-weight: bold; color: var(--primary-color); }
         .stat-label { font-size: 0.85rem; color: var(--text-light); text-transform: uppercase; letter-spacing: 1px; }
 
-        /* TEAM SECTION STYLES - Highlighted */
+        /* TEAM SECTION STYLES */
         .team-container {
             background-color: #fffbeb; /* Light Gold Tint */
             border: 1px solid var(--gold);
@@ -136,6 +153,9 @@
         
         .code-btn { background-color: #e0f2fe; color: #0284c7; border-color: #bae6fd; }
         .code-btn:hover { background-color: #0284c7; color: white; }
+        
+        .video-btn { background-color: #fee2e2; color: #b91c1c; border-color: #fecaca; }
+        .video-btn:hover { background-color: #b91c1c; color: white; }
 
         @media (max-width: 768px) {
             .project-hero { padding: 3rem 1rem; }
@@ -205,14 +225,14 @@
 
         <div class="section-block">
             <h2>Electrical & Systems Architecture</h2>
-            <p>As the electrical lead, I designed a centralized control architecture powered by a <strong>Raspberry Pi 4B</strong>. Unlike simpler microcontroller-based robots, the Pi allowed us to run a full operating system to handle complex networking and multi-threading tasks.</p>
-            <p>The Pi acts as a <strong>WiFi Hotspot</strong>, creating a dedicated local network. The patient wearable devices (powered by <strong>ESP32</strong> microcontrollers) connect directly to this network to transmit real-time biometric data (temperature and button presses) via JSON packets. This eliminated the need for external hospital WiFi infrastructure.</p>
+            <p>As the electrical and software lead, I designed a centralized control architecture powered by a <strong>Raspberry Pi 4B</strong>. Unlike simpler microcontroller-based robots, the Pi allowed us to run a full Linux operating system to handle complex networking and multi-threading tasks.</p>
+            <p>The Pi acts as a <strong>WiFi Hotspot</strong>, creating a dedicated local network. The patient wearable devices (powered by <strong>ESP32</strong> microcontrollers) connect directly to this network to transmit real-time biometric data (temperature and button presses) via JSON packets. This dedicated network ensured low-latency communication independent of external hospital WiFi infrastructure.</p>
             <p>On the robot side, the Pi interfaces with:</p>
             <ul>
-                <li><strong>RoboClaw Motor Controller:</strong> For precise PID control of the high-torque drive motors.</li>
-                <li><strong>BNO055 IMU:</strong> For absolute heading (yaw) data to ensure straight travel and precise 90-degree turns.</li>
-                <li><strong>Ultrasonic Sensors:</strong> For obstacle detection and the "docking search" algorithm.</li>
-                <li><strong>OLED Display:</strong> To output real-time system status, current state, and distance traveled for debugging.</li>
+                <li><strong>RoboClaw Motor Controller:</strong> Handles high-current power distribution and PID velocity control for the drivetrain.</li>
+                <li><strong>BNO055 IMU:</strong> Provides absolute heading (yaw) data via I2C, critical for the robot's dead-reckoning navigation algorithms.</li>
+                <li><strong>Ultrasonic Sensors:</strong> Used for obstacle avoidance and the precision "sweeping scan" docking algorithm.</li>
+                <li><strong>OLED Display:</strong> Outputs real-time system status, current state (e.g., "Scanning", "Delivering"), and IP addresses for debugging.</li>
             </ul>
             
             <div class="grid-gallery">
@@ -229,24 +249,28 @@
 
         <div class="section-block">
             <h2>Software Architecture & Algorithms</h2>
-            <p>I developed the robot's control stack using <strong>Python</strong>. The complexity of handling network traffic while simultaneously driving the motors required a <strong>multi-threaded architecture</strong>.</p>
+            <p>I developed the robot's control stack entirely in <strong>Python</strong>. The complexity of handling asynchronous network traffic while simultaneously driving the motors required a robust <strong>multi-threaded architecture</strong>.</p>
             
-            <h3>1. Threading & Networking</h3>
-            <p>Thread 1 runs a <strong>Flask Web Server</strong> that listens for incoming HTTP POST requests from the wearables. Thread 2 runs the main navigation loop. This separation ensures that a delay in network traffic never causes the robot to "stutter" or miss a sensor reading.</p>
+            <h3>1. Threading & Network Logic</h3>
+            <p>The system runs two primary threads. <strong>Thread 1</strong> hosts a Flask Web Server that listens for incoming HTTP POST requests from the wearables. <strong>Thread 2</strong> runs the main navigation loop. This separation ensures that a delay in network traffic never causes the robot's control loop to hang or stutter.</p>
 
-            <h3>2. Navigation & Sensor Fusion</h3>
-            <p>The robot uses a sensor fusion approach for navigation. It combines encoder data (odometry) to measure distance traveled with data from the <strong>BNO055 IMU</strong> to correct for drift. If the robot hits a bump and veers slightly left, the IMU detects the yaw change, and the PID loop automatically increases power to the left wheels to correct the heading.</p>
+            <h3>2. Wearable Signal Processing</h3>
+            <p>The wearable code (C++) implements a <strong>median filtering algorithm</strong> to clean the raw data from the thermistor. It takes a rapid burst of temperature readings, sorts them, and discards outliers to prevent false "fever" triggers from noise.</p>
 
-            <h3>3. Ultrasonic Docking Search</h3>
-            <p>Precision docking was critical. I implemented a "Search" state where, if the robot arrives at the patient room but does not detect the docking station (the Koozie) immediately, it enters a sweeping scan mode. It utilizes the front-mounted ultrasonic sensor to sweep for the specific geometric profile of the Koozie before initiating the pill dispensing sequence.</p>
+            <h3>3. Navigation Strategies: "Scanning" vs "Fast"</h3>
+            <p>I developed two distinct navigation strategies:</p>
+            <ul>
+                <li><strong>Scanning Mode:</strong> Uses a state-machine approach. If the robot arrives at the patient room but doesn't immediately align with the Koozie, it enters a "Sweep" state, using the ultrasonic sensor to scan the area for the specific geometric profile of the docking station before dispensing.</li>
+                <li><strong>Fast Mode (Dead Reckoning):</strong> For speed optimization, this mode relies on a highly tuned sensor fusion model (IMU + Encoders) to drive precise paths without stopping to scan, relying on the mechanical accuracy of our drivetrain.</li>
+            </ul>
 
             <div style="margin-top: 3rem; background: #2d2d2d; padding: 2rem; border-radius: 8px;">
                 <h3 style="color: white; margin-top: 0;">Source Code Repository</h3>
                 <p style="color: #ccc; margin-bottom: 1.5rem;">Review the actual source code deployed on the robot and wearables.</p>
                 <div class="resource-grid">
-                    <a href="scanning_code.txt" target="_blank" class="doc-btn code-btn">💻 Main Navigation & Scanning</a>
-                    <a href="no_sensors_run.txt" target="_blank" class="doc-btn code-btn">💻 Dead Reckoning Logic</a>
-                    <a href="wearable_code.txt" target="_blank" class="doc-btn code-btn">⌚ ESP32 Wearable Firmware</a>
+                    <a href="MEDS_Scanning_Code.txt" target="_blank" class="doc-btn code-btn">💻 Navigation with Ultrasonic Scan</a>
+                    <a href="MEDS_Fast_Code.txt" target="_blank" class="doc-btn code-btn">💻 Fast Run (Dead Reckoning)</a>
+                    <a href="Wearable_Code.txt" target="_blank" class="doc-btn code-btn">⌚ Wearable Firmware (C++)</a>
                 </div>
             </div>
         </div>
@@ -280,7 +304,7 @@
                 <a href="Drivetrain_Trade_Study (1).pdf" target="_blank" class="doc-btn">📊 Trade Study</a>
                 <a href="Design Specifications_revC.docx" target="_blank" class="doc-btn">📋 Design Specs</a>
                 <a href="BOM.xlsx" target="_blank" class="doc-btn">🧾 Bill of Materials</a>
-                <a href="#" target="_blank" class="doc-btn video-btn">▶️ Watch Trial Video</a>
+                <a href="https://drive.google.com/drive/folders/1C43BhGBOVW4QEc363j9tFHkqdwt4siNk?usp=drive_link" target="_blank" class="doc-btn video-btn">▶️ Watch Trial Video</a>
             </div>
         </div>
 
