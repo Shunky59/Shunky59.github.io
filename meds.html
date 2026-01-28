@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MEDS Autonomous Robot | David Shunk</title>
+    <style>
+        /* --- GLOBAL STYLES --- */
+        :root {
+            --primary-color: #0c2340;
+            --gold: #ae9142;
+            --text-dark: #1f2937;
+            --text-light: #6b7280;
+            --bg-light: #f3f4f6;
+            --white: #ffffff;
+        }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; color: var(--text-dark); line-height: 1.6; background-color: var(--white); }
+        a { text-decoration: none; color: inherit; }
+        
+        /* HEADER */
+        header { background: var(--white); box-shadow: 0 2px 5px rgba(0,0,0,0.1); padding: 1rem 2rem; position: sticky; top: 0; z-index: 1000;}
+        nav { max-width: 1100px; margin: auto; display: flex; justify-content: space-between; align-items: center; }
+        .logo { font-size: 1.5rem; font-weight: bold; color: var(--primary-color); }
+        .back-link { font-weight: 500; color: var(--text-light); display: flex; align-items: center; gap: 5px; }
+        .back-link:hover { color: var(--primary-color); }
+
+        /* HERO */
+        .project-hero {
+            background: linear-gradient(135deg, var(--primary-color) 0%, #1a3c6e 100%);
+            color: white;
+            padding: 6rem 2rem;
+            text-align: center;
+        }
+        .hero-tags { margin-top: 1rem; display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap; }
+        .hero-tag { border: 1px solid var(--gold); padding: 5px 15px; border-radius: 20px; font-size: 0.9rem; color: var(--gold); }
+
+        /* CONTENT CONTAINERS */
+        .container { max-width: 1000px; margin: auto; padding: 4rem 2rem; }
+        
+        /* Consistent Section Spacing */
+        .section-block { margin-bottom: 4rem; padding-bottom: 4rem; border-bottom: 1px solid #eee; }
+        .section-block:last-child { border-bottom: none; }
+        
+        h2 { color: var(--primary-color); font-size: 2rem; border-left: 5px solid var(--gold); padding-left: 1rem; margin-bottom: 1.5rem; }
+        p { color: #374151; margin-bottom: 1.5rem; font-size: 1.1rem; }
+        
+        /* Lists */
+        ul.takeaways { list-style: none; padding-left: 0; }
+        ul.takeaways li { 
+            position: relative; 
+            padding-left: 1.5rem; 
+            margin-bottom: 1rem; 
+            color: #4b5563;
+        }
+        ul.takeaways li::before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: var(--gold);
+            font-weight: bold;
+        }
+
+        /* IMAGE STYLES */
+        .grid-gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 2rem; margin-top: 2rem; }
+        .gallery-item { text-align: center; }
+        .gallery-img { 
+            width: 100%; 
+            height: 300px; 
+            object-fit: cover; 
+            border-radius: 8px; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15); 
+            transition: transform 0.3s;
+            background-color: #f0f0f0; 
+        }
+        .gallery-img:hover { transform: scale(1.02); }
+
+        /* Feature image (Full Width) */
+        .feature-img {
+            width: 100%;
+            max-width: 800px;
+            height: auto;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+        }
+
+        /* Diagrams */
+        .diagram-img {
+            width: 100%;
+            height: auto;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+        }
+
+        .caption { margin-top: 0.8rem; font-size: 0.95rem; color: var(--text-light); }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            text-align: center;
+            background: var(--bg-light);
+            padding: 2rem;
+            border-radius: 8px;
+            margin: 2rem 0;
+        }
+        .stat-number { display: block; font-size: 2.2rem; font-weight: bold; color: var(--primary-color); }
+        .stat-label { font-size: 0.85rem; color: var(--text-light); text-transform: uppercase; letter-spacing: 1px; }
+
+        /* Code Block */
+        .code-snippet {
+            background: #2d2d2d;
+            color: #ccc;
+            padding: 1.5rem;
+            border-radius: 8px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.9rem;
+            overflow-x: auto;
+            margin: 2rem 0;
+            text-align: left;
+        }
+
+        /* DOCUMENT LINKS */
+        .resource-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+        .doc-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f3f4f6;
+            padding: 1rem;
+            border-radius: 8px;
+            color: var(--primary-color);
+            font-weight: 600;
+            border: 1px solid #e5e7eb;
+            transition: all 0.2s;
+            text-align: center;
+        }
+        .doc-btn:hover { background: var(--primary-color); color: white; border-color: var(--primary-color); }
+
+        /* Team Section */
+        .team-links { display: flex; justify-content: center; gap: 1.5rem; flex-wrap: wrap; margin-top: 1rem; }
+        .team-member { color: var(--text-light); border-bottom: 1px dotted var(--text-light); transition: color 0.2s; }
+        .team-member:hover { color: var(--primary-color); border-bottom: 1px solid var(--primary-color); }
+
+        @media (max-width: 768px) {
+            .project-hero { padding: 3rem 1rem; }
+            .grid-gallery { grid-template-columns: 1fr; }
+            .stats-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <nav>
+            <div class="logo"><a href="index.html">David Shunk</a></div>
+            <a href="index.html#projects" class="back-link">&larr; Back to Projects</a>
+        </nav>
+    </header>
+
+    <div class="project-hero">
+        <h1 style="font-size: 3rem; margin: 0;">MEDS: Autonomous Delivery Robot</h1>
+        <p style="color: #cbd5e1; max-width: 600px; margin: 1rem auto;">Senior Capstone Design: A fully autonomous system for hospital medication delivery.</p>
+        <div class="hero-tags">
+            <span class="hero-tag">Systems Engineering</span>
+            <span class="hero-tag">Python & Flask</span>
+            <span class="hero-tag">Mechatronics</span>
+        </div>
+    </div>
+
+    <div class="container">
+
+        <div class="section-block">
+            <h2>The Challenge</h2>
+            <p>For our Senior Design Capstone, our team designed, built, and validated the Medical Express Delivery System (MEDS). The objective was to create an autonomous robot (1 ft × 1 ft, 17 lbs) capable of navigating a hospital environment, detecting "patient" distress signals via wearable sensors, and dispensing medication.</p>
+            
+            <div style="text-align: center; margin-top: 2rem; margin-bottom: 2rem;">
+                <img src="fullproduct.jpg" alt="Complete MEDS System" class="feature-img">
+                <div class="caption">The complete system: Autonomous Robot, Koozie Docking Station, and Patient Wearables.</div>
+            </div>
+
+            <p>Our final system featured a skid-steering drivetrain for zero-radius turns, a custom rack-and-pinion dispenser, and a sophisticated fever-detection algorithm. We completed the build for <strong>$836.14</strong>, staying well under our $1,000 budget.</p>
+
+            <div class="stats-grid">
+                <div>
+                    <span class="stat-number">3:10</span>
+                    <span class="stat-label">Course Time</span>
+                </div>
+                <div>
+                    <span class="stat-number">100%</span>
+                    <span class="stat-label">Delivery Accuracy</span>
+                </div>
+                <div>
+                    <span class="stat-number">0</span>
+                    <span class="stat-label">Collisions</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="section-block">
+            <h2>Electrical & Systems Architecture</h2>
+            <p>I led the electrical integration for the system. The robot features a Raspberry Pi 4 acting as the central brain, communicating with a RoboClaw motor controller and an Arduino Nano for the delivery mechanism. The wearable utilizes an ESP32 for WiFi communication, enabling patients to trigger the robot via a button press or automatic fever detection.</p>
+            
+            <div class="grid-gallery">
+                <div class="gallery-item">
+                    <img src="robotwiringdiagram.png" alt="Robot Wiring Diagram" class="diagram-img">
+                    <div class="caption">Robot Wiring Diagram: Power distribution and signal flow.</div>
+                </div>
+                <div class="gallery-item">
+                    <img src="wearablewiringdiagram.png" alt="Wearable Wiring Diagram" class="diagram-img">
+                    <div class="caption">Wearable Wiring Diagram: ESP32 biometrics integration.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section-block">
+            <h2>Mechanical Integration</h2>
+            <p>The robot utilized traction wheels in the back and omni wheels in the front, allowing for precise skid steering. For the medication hand-off, we designed a custom rack-and-pinion mechanism that extended the medication cup to the "Koozie" docking station, ensuring precise delivery without spillage.</p>
+            
+            <div class="grid-gallery">
+                <div class="gallery-item">
+                    <img src="fullcad.png" alt="Full Robot CAD" class="gallery-img">
+                    <div class="caption">SolidWorks Assembly of the drivetrain and LIDAR tower.</div>
+                </div>
+                
+                <div class="gallery-item">
+                    <img src="pilldispenser.png" alt="Rack and Pinion Mechanism" class="gallery-img">
+                    <div class="caption">Detail view of the custom Rack-and-Pinion medication dispenser.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section-block">
+            <h2>Software Architecture: "The Brain"</h2>
+            <p>This was the most complex technical challenge. I developed the control software using <strong>Python</strong> on the Raspberry Pi. The system utilized multi-threading to handle competing tasks: one thread managed the <strong>Flask web server</strong> for WiFi communication with patient wearables, while another thread handled sensor polling and navigation logic.</p>
+
+            <div class="code-snippet">
+# Python Threading for Simultaneous Patient Monitoring
+w_thread = threading.Thread(target=lambda: app.run(host='0.0.0.0', port=WEB_PORT), daemon=True)
+w_thread.start()
+
+p_thread = threading.Thread(target=poll_patients_loop, daemon=True)
+p_thread.start()
+
+print("System READY. Monitoring Patients...")
+
+# Logic to prioritize 'Fever' signals over standard button presses
+if p1['feverLatched'] and "P1_FEVER" not in ignored: 
+    active_pid = 1; active_trigger = "FEVER"
+            </div>
+        </div>
+
+        <div class="section-block">
+            <h2>Prototyping & Iteration</h2>
+            <p>We followed a rigorous design-build-test cycle. Early prototypes focused on validating the ESP32 WiFi communication range and the torque requirements for the drivetrain. Starting prototyping early with low-cost materials (cardboard and basic 3D prints) allowed us to catch integration errors weeks before the final deadline.</p>
+            
+            <div class="grid-gallery">
+                <div class="gallery-item">
+                    <img src="robotprototype.jpg" alt="Early Robot Chassis" class="gallery-img">
+                    <div class="caption">Initial chassis testing and electronics fit-check.</div>
+                </div>
+                <div class="gallery-item">
+                    <img src="wearableprototype.png" alt="Wearable Prototype" class="gallery-img">
+                    <div class="caption">Breadboarding the patient wearable sensor array.</div>
+                </div>
+                <div class="gallery-item">
+                    <img src="workingrobot.png" alt="Robot Validation" class="gallery-img">
+                    <div class="caption">Final validation run on the obstacle course.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section-block">
+            <h2>Project Management & Key Takeaways</h2>
+            <p>Our success was built on clear communication and parallel workflow. By setting clear expectations for each subsystem owner, we avoided the "integration hell" common in capstone projects.</p>
+            
+            <ul class="takeaways">
+                <li><strong>Internal Deadlines:</strong> Kept the group ahead of schedule, allowing for extensive testing time.</li>
+                <li><strong>Trade Studies:</strong> Mathematical modeling (MATLAB) guided our motor selection, preventing costly hardware pivots later.</li>
+                <li><strong>Simplicity Wins:</strong> We prioritized robust, simple solutions over complex ones, resulting in a 4.7/5 manufacturing quality score.</li>
+            </ul>
+
+            <div style="text-align: center; margin-top: 2rem;">
+                <p style="font-weight: bold; color: var(--primary-color);">The Team</p>
+                <div class="team-links">
+                    <a href="https://www.linkedin.com/in/leah-kern/" target="_blank" class="team-member">Leah Kern</a>
+                    <a href="https://www.linkedin.com/in/athena-archuleta-a59312231/" target="_blank" class="team-member">Athena Archuleta</a>
+                    <a href="https://www.linkedin.com/in/stevenvn/" target="_blank" class="team-member">Steven Vanden Noven</a>
+                    <a href="https://www.linkedin.com/in/megan-oconnor-nd/" target="_blank" class="team-member">Megan O'Connor</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="section-block">
+            <h2>Technical Resources & Documentation</h2>
+            <p>Download the full engineering documentation for a deeper dive into the system design and validation.</p>
+            
+            <div class="resource-grid">
+                <a href="Final Project_Group 2.pdf" target="_blank" class="doc-btn">📄 Final Paper</a>
+                <a href="Drivetrain_Trade_Study (1).pdf" target="_blank" class="doc-btn">📊 Trade Study</a>
+                <a href="designproposal.pdf" target="_blank" class="doc-btn">📝 Design Proposal</a>
+                <a href="Design Specifications_revC.docx" target="_blank" class="doc-btn">📋 Design Specs</a>
+                <a href="BOM.xlsx" target="_blank" class="doc-btn">🧾 Bill of Materials</a>
+            </div>
+        </div>
+
+    </div>
+
+    <div style="text-align: center; padding: 2rem; background: var(--primary-color); color: white;">
+        <p>&copy; 2026 David Shunk</p>
+    </div>
+
+</body>
+</html>
