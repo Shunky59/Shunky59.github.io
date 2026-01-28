@@ -24,11 +24,9 @@
         .back-link { font-weight: 500; color: var(--text-light); display: flex; align-items: center; gap: 5px; }
         .back-link:hover { color: var(--primary-color); }
 
-        /* HERO */
+        /* HERO - Gradient Background now (Images moved to content) */
         .project-hero {
-            background: linear-gradient(rgba(12, 35, 64, 0.85), rgba(12, 35, 64, 0.85)), url('plotter.JPG');
-            background-size: cover;
-            background-position: center;
+            background: linear-gradient(135deg, var(--primary-color) 0%, #1a3c6e 100%);
             color: white;
             padding: 6rem 2rem;
             text-align: center;
@@ -39,7 +37,7 @@
         /* CONTENT CONTAINERS */
         .container { max-width: 900px; margin: auto; padding: 4rem 2rem; }
         
-        /* Consistent Section Spacing & Colors */
+        /* Consistent Section Spacing */
         .section-block { margin-bottom: 4rem; padding-bottom: 4rem; border-bottom: 1px solid #eee; }
         .section-block:last-child { border-bottom: none; }
         
@@ -62,6 +60,17 @@
         }
         .gallery-img:hover { transform: scale(1.02); }
 
+        /* Specific class for the main workstation photo to be larger */
+        .feature-img {
+            width: 100%;
+            height: auto;
+            max-height: 500px;
+            object-fit: cover;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+            margin-bottom: 1rem;
+        }
+
         .caption { margin-top: 0.8rem; font-size: 0.95rem; color: var(--text-light); }
 
         /* STATS BOX */
@@ -78,17 +87,6 @@
         .stat-number { display: block; font-size: 2.5rem; font-weight: bold; color: var(--primary-color); }
         .stat-label { font-size: 0.9rem; color: var(--text-light); text-transform: uppercase; letter-spacing: 1px; }
 
-        .btn-outline {
-            display: inline-block;
-            border: 2px solid var(--primary-color);
-            color: var(--primary-color);
-            padding: 10px 20px;
-            border-radius: 5px;
-            font-weight: bold;
-            transition: all 0.3s;
-        }
-        .btn-outline:hover { background: var(--primary-color); color: white; }
-        
         .attribution { font-size: 0.85rem; color: var(--text-light); margin-top: 0.5rem; }
         .attribution a { text-decoration: underline; }
 
@@ -121,20 +119,24 @@
     <div class="container">
 
         <div class="section-block">
-            <h2>The Setup & Applications</h2>
-            <p>My workshop centers around a Prusa MK4s equipped with the MMU3 multi-material unit. Early on I realized that printing high-performance materials like ABS in a standard room resulted in warping due to drafts and temperature fluctuations. To solve this I designed and built a custom thermal enclosure which maintains a stable internal temperature. I also integrated a fume extraction system so I can safely run long prints in my workspace without air quality issues.</p>
-            <p>This isn't just a hobby machine. It is my primary manufacturing tool for engineering projects. I used this rig to prototype and produce functional suspension components for the Lehigh Formula SAE car. Being able to print parts overnight allowed our team to test fitment and geometry rapidly before committing to expensive metal machining.</p>
+            <h2>The Machine: Build & Evolution</h2>
+            <p>My 3D printing experience is anchored by this machine, which I use for all of my personal prototyping and modeling projects. The journey began when I built a Prusa MK3s from a kit to understand the underlying motion system. I later expanded its capabilities by adding the MMU2 (Multi-Material Upgrade).</p>
+            <p>Recently, I performed a comprehensive overhaul, upgrading the entire system to the MK4s with the MMU3. To enable remote control and video monitoring, I integrated a Raspberry Pi running Octoprint. This allows me to manage prints from anywhere and capture time-lapses of complex builds.</p>
             
-            <div class="grid-gallery">
-                <div class="gallery-item">
-                    <img src="enclosure.JPG" alt="Custom Enclosure" class="gallery-img">
-                    <div class="caption">Custom-built thermal enclosure with fume extraction.</div>
-                </div>
-                
-                <div class="gallery-item">
-                    <img src="sae.JPG" alt="Lehigh Formula SAE" class="gallery-img">
-                    <div class="caption">Prototyping suspension components for Lehigh Formula SAE.</div>
-                </div>
+            <div style="text-align: center; margin-top: 2rem;">
+                <img src="workstation.JPG" alt="My Prusa Workstation" class="feature-img">
+                <div class="caption">My current workstation setup with the Prusa MK4s, soldering station, and electronics bench.</div>
+            </div>
+        </div>
+
+        <div class="section-block">
+            <h2>Enclosure & Environment</h2>
+            <p>To improve air quality and print consistency, I constructed an enclosure based on a popular open-source community design. While I primarily print with PETG for its durability and ease of use, the enclosure provides a stable thermal environment that improves layer adhesion.</p>
+            <p>More importantly, the enclosure helps with air quality management in my workspace. I integrated a filtration and fume extraction system to ensure a safe environment during long prototyping sessions.</p>
+            
+            <div style="text-align: center; margin-top: 2rem;">
+                <img src="enclosure.JPG" alt="Printer Enclosure" class="feature-img" style="max-width: 700px;">
+                <div class="caption">The enclosure setup featuring LED lighting and fume extraction.</div>
             </div>
         </div>
 
@@ -152,7 +154,7 @@
         <div class="section-block">
             <h2>Impact: COVID-19 Face Shield Response</h2>
             <p>In March 2020 when PPE was scarce I converted my workshop into a 24/7 manufacturing line. I utilized the open-source Prusa Face Shield design and optimized the print settings to maximize production speed without sacrificing safety. I ran the printer continuously for weeks to meet the demand.</p>
-            <p>I coordinated directly with hospital administrators to deliver over 400 face shields to front-line workers at Overlook and Morristown Medical Centers as well as the Summit Emergency Squad.</p>
+            <p>I coordinated directly with local medical professionals to distribute the equipment where it was needed most. Recipients included Summit EMS, Overlook Hospital, Morristown Hospital, as well as local doctors and orthodontists.</p>
             
             <div class="stats-grid">
                 <div>
@@ -192,10 +194,20 @@
             </div>
 
             <div style="text-align: center; margin-top: 2rem;">
-                 <a href="https://www.youtube.com/watch?v=ZLS_I4OvBy4&t=2s" target="_blank" class="btn-outline">Watch Summit Spotlight Video &rarr;</a>
                  <div class="attribution">
                     Face Shield Design by <a href="https://www.printables.com/model/25857-prusa-face-shield" target="_blank">Prusa Research</a>
                  </div>
+            </div>
+        </div>
+
+        <div class="section-block">
+            <h2>Lehigh Formula SAE Support</h2>
+            <p>While I was a member of the Lehigh Formula SAE team, I took charge of the 3D printing efforts for the shop. The photo below shows a different machine I operated in the university lab.</p>
+            <p>In this specific instance, I was printing custom welding jigs (mounts) for the chassis team. These fixtures were critical for holding the steel frame tubes in precise alignment during the welding process, ensuring the chassis met the strict geometric tolerances required for the competition vehicle.</p>
+            
+            <div style="text-align: center; margin-top: 2rem;">
+                <img src="sae.JPG" alt="Lehigh Formula SAE" class="feature-img" style="max-width: 700px;">
+                <div class="caption">Printing chassis welding mounts in the Lehigh SAE shop.</div>
             </div>
         </div>
 
