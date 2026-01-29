@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FPV Drones & Education | David Shunk</title>
+    <style>
+        /* --- GLOBAL STYLES (Matched to medical-robot.html) --- */
+        :root {
+            --primary-color: #0c2340;
+            --gold: #ae9142;
+            --text-dark: #1f2937;
+            --text-light: #6b7280;
+            --bg-light: #f3f4f6;
+            --white: #ffffff;
+        }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; color: var(--text-dark); line-height: 1.6; background-color: var(--white); }
+        a { text-decoration: none; color: inherit; }
+        
+        /* HEADER */
+        header { background: var(--white); box-shadow: 0 2px 5px rgba(0,0,0,0.1); padding: 1rem 2rem; position: sticky; top: 0; z-index: 1000;}
+        nav { max-width: 1100px; margin: auto; display: flex; justify-content: space-between; align-items: center; }
+        .logo { font-size: 1.5rem; font-weight: bold; color: var(--primary-color); }
+        .back-link { font-weight: 500; color: var(--text-light); display: flex; align-items: center; gap: 5px; }
+        .back-link:hover { color: var(--primary-color); }
+
+        /* HERO */
+        .project-hero {
+            background: linear-gradient(135deg, var(--primary-color) 0%, #1a3c6e 100%);
+            color: white;
+            padding: 6rem 2rem;
+            text-align: center;
+        }
+        .hero-tags { margin-top: 1rem; display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap; }
+        .hero-tag { border: 1px solid var(--gold); padding: 5px 15px; border-radius: 20px; font-size: 0.9rem; color: var(--gold); }
+
+        /* CONTENT CONTAINERS */
+        .container { max-width: 1000px; margin: auto; padding: 4rem 2rem; }
+        
+        /* Consistent Section Spacing */
+        .section-block { margin-bottom: 4rem; padding-bottom: 4rem; border-bottom: 1px solid #eee; }
+        .section-block:last-child { border-bottom: none; }
+        
+        h2 { color: var(--primary-color); font-size: 2rem; border-left: 5px solid var(--gold); padding-left: 1rem; margin-bottom: 1.5rem; }
+        h3 { color: var(--text-dark); margin-top: 2rem; margin-bottom: 0.5rem; }
+        p { color: #374151; margin-bottom: 1.5rem; font-size: 1.1rem; }
+        
+        /* Lists */
+        ul.takeaways { list-style: none; padding-left: 0; }
+        ul.takeaways li { 
+            position: relative; 
+            padding-left: 1.5rem; 
+            margin-bottom: 1rem; 
+            color: #4b5563;
+        }
+        ul.takeaways li::before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: var(--gold);
+            font-weight: bold;
+        }
+
+        /* IMAGE STYLES */
+        .grid-gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 2rem; margin-top: 2rem; }
+        .gallery-item { text-align: center; }
+        .gallery-img { 
+            width: 100%; 
+            height: 300px; 
+            object-fit: cover; 
+            border-radius: 8px; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15); 
+            transition: transform 0.3s;
+            background-color: #f0f0f0; 
+        }
+        .gallery-img:hover { transform: scale(1.02); }
+
+        .caption { margin-top: 0.8rem; font-size: 0.95rem; color: var(--text-light); }
+
+        /* STATS GRID (Adapted for Drones) */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            text-align: center;
+            background: var(--bg-light);
+            padding: 2rem;
+            border-radius: 8px;
+            margin: 2rem 0;
+        }
+        .stat-number { display: block; font-size: 2.2rem; font-weight: bold; color: var(--primary-color); }
+        .stat-label { font-size: 0.85rem; color: var(--text-light); text-transform: uppercase; letter-spacing: 1px; }
+
+        @media (max-width: 768px) {
+            .project-hero { padding: 3rem 1rem; }
+            .grid-gallery { grid-template-columns: 1fr; }
+            .stats-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <nav>
+            <div class="logo"><a href="index.html">David Shunk</a></div>
+            <a href="index.html#projects" class="back-link">&larr; Back to Projects</a>
+        </nav>
+    </header>
+
+    <div class="project-hero">
+        <h1 style="font-size: 3rem; margin: 0;">FPV Drones & STEM Education</h1>
+        <p style="color: #cbd5e1; max-width: 600px; margin: 1rem auto;">High-performance UAV design and curriculum development for student robotics.</p>
+        <div class="hero-tags">
+            <span class="hero-tag">UAV Systems</span>
+            <span class="hero-tag">Betaflight Tuning</span>
+            <span class="hero-tag">Curriculum Design</span>
+            <span class="hero-tag">Soldering & Assembly</span>
+        </div>
+    </div>
+
+    <div class="container">
+
+        <div class="section-block">
+            <h2>Custom FPV Builds</h2>
+            <p>My journey into First Person View (FPV) drones began with a desire to understand the intersection of high-speed aerodynamics, radio frequency (RF) transmission, and power systems. I design, build, and pilot custom quadcopters optimized for both freestyle flying and cinematic capture.</p>
+            
+            <p>The build process involves selecting components for optimal power-to-weight ratios, detailed soldering of flight controllers (FC) and electronic speed controllers (ESC), and configuring firmware via Betaflight. I manually tune PID loops to eliminate prop-wash oscillation and ensure locked-in flight characteristics.</p>
+            
+            <div class="stats-grid">
+                <div>
+                    <span class="stat-number">90+</span>
+                    <span class="stat-label">mph Top Speed</span>
+                </div>
+                <div>
+                    <span class="stat-number">4-6S</span>
+                    <span class="stat-label">Power Systems</span>
+                </div>
+                <div>
+                    <span class="stat-number">100%</span>
+                    <span class="stat-label">Custom Built</span>
+                </div>
+            </div>
+
+            <div class="grid-gallery">
+                <div class="gallery-item">
+                    <img src="drone1.JPG" alt="Custom Built FPV Drone 1" class="gallery-img">
+                    <div class="caption">5-inch freestyle build featuring carbon fiber frame and high-KV brushless motors.</div>
+                </div>
+                <div class="gallery-item">
+                    <img src="drone2.jpg" alt="Custom Built FPV Drone 2" class="gallery-img">
+                    <div class="caption">Secondary rig optimized for durability and tighter proximity flying.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section-block">
+            <h2>Educational Curriculum: Robot Revolution</h2>
+            <p>Beyond personal engineering, I applied my expertise to design and launch a comprehensive "Build Your Own Drone" course for <strong>Robot Revolution</strong>. The goal was to translate complex avionics concepts into an accessible curriculum for middle and high school students.</p>
+            
+            <h3>Curriculum Development</h3>
+            <p>I structured the course to guide students through the entire engineering lifecycle of a drone. This was not a kit-assembly class; students learned the fundamental theory behind every component they touched.</p>
+            <ul class="takeaways">
+                <li><strong>Electronics Fabrication:</strong> Taught precision soldering techniques for attaching motors to ESCs and wiring flight stacks.</li>
+                <li><strong>Flight Dynamics:</strong> Explained the physics of multi-rotor flight, including yaw, pitch, roll, and throttle mixing.</li>
+                <li><strong>Safety & Regulations:</strong> Integrated modules on LiPo battery safety (charging/storage) and FAA regulations for recreational UAV pilots.</li>
+            </ul>
+
+            <div class="grid-gallery">
+                <div class="gallery-item">
+                    <img src="drone_camp.png" alt="Drone Course Listing" class="gallery-img" style="object-fit: contain; background: white;">
+                    <div class="caption">The official course listing I developed for the Robot Revolution program.</div>
+                </div>
+                <div class="gallery-item">
+                    <img src="drone_camp.JPG" alt="Drone Kit Parts Layout" class="gallery-img">
+                    <div class="caption">Component breakdown: Students learned to identify and assemble every part of the system.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section-block">
+            <h2>Project Takeaways</h2>
+            <p>Operating in the FPV space has sharpened my ability to troubleshoot complex electro-mechanical systems in the field. Translating that knowledge into a curriculum for students reinforced my communication skills and my ability to break down technical barriers for non-engineers.</p>
+            <ul class="takeaways">
+                <li><strong>Systems Integration:</strong> gained deep experience ensuring compatibility between video transmitters (VTX), receiver protocols (ELRS/Crossfire), and flight logic.</li>
+                <li><strong>Diagnostics:</strong> Learned to analyze blackbox logs to diagnose noise issues and filter settings.</li>
+                <li><strong>Technical Leadership:</strong> Successfully managed a classroom environment, ensuring safety while fostering enthusiasm for STEM.</li>
+            </ul>
+        </div>
+
+    </div>
+
+    <div style="text-align: center; padding: 2rem; background: var(--primary-color); color: white;">
+        <p>&copy; 2026 David Shunk</p>
+    </div>
+
+</body>
+</html>
