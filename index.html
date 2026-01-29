@@ -21,6 +21,7 @@
             padding: 0;
             color: var(--text-dark);
             line-height: 1.6;
+            background-color: var(--bg-light);
         }
 
         a { text-decoration: none; color: inherit; }
@@ -29,7 +30,7 @@
         /* --- 2. NAVIGATION BAR --- */
         header {
             background: var(--white);
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
             position: fixed;
             width: 100%;
             top: 0;
@@ -61,6 +62,7 @@
         .nav-links a {
             font-weight: 500;
             transition: color 0.3s;
+            color: var(--text-dark);
         }
 
         .nav-links a:hover { color: var(--gold); }
@@ -70,12 +72,13 @@
             display: none;
             position: absolute;
             background-color: var(--white);
-            min-width: 260px; /* Made wider for longer titles */
+            min-width: 260px;
             box-shadow: 0px 8px 16px rgba(0,0,0,0.1);
             top: 100%;
             left: 0;
             border-radius: 4px;
             overflow: hidden;
+            border-top: 3px solid var(--gold);
         }
 
         .dropdown:hover .dropdown-content { display: block; }
@@ -85,9 +88,10 @@
             display: block;
             font-size: 0.9rem;
             border-bottom: 1px solid #f0f0f0;
+            color: var(--text-dark);
         }
 
-        .dropdown-content a:hover { background-color: var(--bg-light); }
+        .dropdown-content a:hover { background-color: var(--bg-light); color: var(--primary-color); }
         
         .dropdown-header {
             font-size: 0.75rem;
@@ -107,129 +111,262 @@
             align-items: center;
             justify-content: center;
             text-align: center;
-            background: linear-gradient(135deg, #e0f2fe 0%, #ffffff 100%);
+            /* Updated to Dark Navy Gradient to match sub-pages */
+            background: linear-gradient(135deg, var(--primary-color) 0%, #1a3c6e 100%);
             padding: 0 2rem;
             padding-top: 60px;
+            color: var(--white);
+            position: relative;
         }
 
+        /* Optional Pattern Overlay */
+        #home::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image: radial-gradient(#ffffff 1px, transparent 1px);
+            background-size: 40px 40px;
+            opacity: 0.05;
+            pointer-events: none;
+        }
+
+        .hero-content { z-index: 1; }
+
         .hero-content h1 {
-            font-size: 3.5rem;
+            font-size: 4rem;
             margin-bottom: 0.5rem;
-            color: var(--primary-color);
+            font-weight: 700;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
 
         .hero-content h2 {
-            font-size: 1.5rem;
-            font-weight: normal;
+            font-size: 1.75rem;
+            font-weight: 300;
             margin-bottom: 1rem;
-            color: var(--text-dark);
+            color: #e2e8f0;
         }
 
         .hero-content p {
             font-size: 1.25rem;
-            color: var(--text-light);
+            color: #cbd5e1;
             max-width: 600px;
-            margin: 0 auto 2rem auto;
+            margin: 0 auto 2.5rem auto;
         }
 
         .btn {
-            background-color: var(--primary-color);
-            color: white;
-            padding: 0.8rem 1.5rem;
-            border-radius: 5px;
+            background-color: var(--gold);
+            color: var(--primary-color);
+            padding: 0.9rem 2rem;
+            border-radius: 30px;
             font-weight: bold;
-            transition: transform 0.2s, background-color 0.2s;
+            transition: all 0.3s ease;
+            display: inline-block;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
         }
 
         .btn:hover { 
-            transform: translateY(-2px); 
-            background-color: var(--gold);
+            transform: translateY(-3px); 
+            background-color: #d4b052;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.3);
         }
 
         /* --- 4. PROJECTS SECTION --- */
-        section { padding: 5rem 2rem; }
+        section { padding: 6rem 2rem; }
         
         .section-title {
             text-align: center;
-            font-size: 2rem;
-            margin-bottom: 3rem;
+            font-size: 2.2rem;
+            margin-bottom: 4rem;
             color: var(--primary-color);
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+        
+        /* Gold Underline for Titles */
+        .section-title::after {
+            content: "";
+            display: block;
+            width: 60px;
+            height: 4px;
+            background: var(--gold);
+            margin: 10px auto 0;
+            border-radius: 2px;
         }
 
         .project-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 2rem;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 2.5rem;
             max-width: 1100px;
             margin: auto;
         }
 
         .project-card {
             background: var(--white);
-            border-radius: 8px;
+            border-radius: 12px;
             overflow: hidden;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            transition: transform 0.3s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
             cursor: pointer;
-            display: block; /* Makes the whole card clickable link */
+            display: block;
             height: 100%;
+            border: 1px solid transparent;
         }
 
-        .project-card:hover { transform: translateY(-5px); }
+        .project-card:hover { 
+            transform: translateY(-8px); 
+            box-shadow: 0 12px 24px rgba(0,0,0,0.1);
+            border-color: var(--gold); /* Gold border on hover */
+        }
+
+        .project-img-container {
+            width: 100%;
+            height: 220px;
+            overflow: hidden;
+            position: relative;
+        }
 
         .project-img {
             width: 100%;
-            height: 200px;
-            background-color: #ddd;
+            height: 100%;
             object-fit: cover;
+            transition: transform 0.5s ease;
+        }
+
+        .project-card:hover .project-img {
+            transform: scale(1.05);
         }
 
         .project-info { padding: 1.5rem; }
-        .project-info h3 { margin-top: 0; color: var(--primary-color); }
+        .project-info h3 { margin-top: 0; color: var(--primary-color); font-size: 1.25rem; margin-bottom: 0.5rem;}
+        .project-info p { color: #555; font-size: 0.95rem; margin-bottom: 1rem; }
+        
         .tags {
-            margin-top: 1rem;
             display: flex;
             gap: 0.5rem;
             flex-wrap: wrap;
         }
+        
         .tag {
-            background: var(--bg-light);
-            padding: 0.2rem 0.6rem;
+            background: #f1f5f9;
+            padding: 0.25rem 0.75rem;
             border-radius: 20px;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             color: var(--text-light);
-            border: 1px solid #e5e7eb;
+            font-weight: 600;
+            border: 1px solid #e2e8f0;
+        }
+
+        /* "Coming Soon" styling */
+        .project-card.coming-soon {
+            cursor: default;
+            pointer-events: none; /* Disable clicking */
+            opacity: 0.8;
+        }
+
+        .project-card.coming-soon:hover {
+            transform: none;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            border-color: transparent;
+        }
+
+        .coming-soon-badge {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+
+        .badge-text {
+            background: var(--primary-color);
+            color: white;
+            padding: 0.5rem 1.5rem;
+            border-radius: 30px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
 
         /* --- 5. RESUME & CONTACT --- */
-        #experience { background-color: var(--bg-light); }
+        #experience { background-color: var(--white); }
         .resume-container {
             max-width: 800px;
             margin: auto;
             background: var(--white);
-            padding: 2rem;
-            border: 1px solid #e5e7eb;
-            border-radius: 8px;
+            /* Removed the border box look, made it cleaner */
         }
-        .job { margin-bottom: 2rem; padding-bottom: 2rem; border-bottom: 1px solid #eee; }
+        .job { 
+            margin-bottom: 2rem; 
+            padding-bottom: 2rem; 
+            border-bottom: 1px solid #f0f0f0; 
+        }
         .job:last-child { border-bottom: none; margin-bottom: 0; }
-        .job-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem; flex-wrap: wrap; }
-        .job-title { font-weight: bold; font-size: 1.2rem; color: var(--text-dark); }
-        .job-company { display: block; font-weight: 600; color: var(--primary-color); }
-        .job-date { color: var(--text-light); font-size: 0.9rem; font-style: italic;}
-        .job ul { list-style: disc; padding-left: 1.5rem; margin-top: 0.5rem; }
-        .job li { margin-bottom: 0.5rem; color: #4b5563; }
+        
+        .job-header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: flex-start; 
+            margin-bottom: 0.5rem; 
+            flex-wrap: wrap; 
+        }
+        
+        .job-title { 
+            font-weight: 700; 
+            font-size: 1.15rem; 
+            color: var(--text-dark); 
+            display: block;
+        }
+        
+        .job-company { 
+            display: block; 
+            font-weight: 600; 
+            color: var(--primary-color);
+            font-size: 1rem; 
+            margin-bottom: 2px;
+        }
+        
+        .job-date { 
+            color: var(--gold); 
+            font-size: 0.9rem; 
+            font-weight: 600;
+        }
+        
+        .job ul { list-style: disc; padding-left: 1.2rem; margin-top: 0.8rem; }
+        .job li { margin-bottom: 0.4rem; color: #4b5563; font-size: 0.95rem; }
 
         #contact { text-align: center; background-color: var(--primary-color); color: white; }
         #contact .section-title { color: white; }
+        #contact .section-title::after { background: white; }
+        
         .contact-links { display: flex; justify-content: center; gap: 2rem; margin-top: 2rem; flex-wrap: wrap; }
-        .contact-btn { border: 2px solid white; padding: 10px 20px; border-radius: 30px; transition: background 0.3s, color 0.3s; }
-        .contact-btn:hover { background: white; color: var(--primary-color); }
+        
+        .contact-btn { 
+            border: 2px solid rgba(255,255,255,0.3); 
+            padding: 12px 25px; 
+            border-radius: 30px; 
+            transition: all 0.3s; 
+            background: rgba(255,255,255,0.05);
+        }
+        
+        .contact-btn:hover { 
+            background: white; 
+            color: var(--primary-color); 
+            border-color: white;
+            transform: translateY(-3px);
+        }
 
         @media (max-width: 768px) {
-            .hero-content h1 { font-size: 2.5rem; }
+            .hero-content h1 { font-size: 2.8rem; }
             .nav-links { display: none; }
             .job-header { flex-direction: column; }
+            .job-date { margin-top: 5px; margin-bottom: 10px; }
         }
     </style>
 </head>
@@ -277,52 +414,42 @@
         <div class="project-grid">
             
             <a href="medical-robot.html" class="project-card">
-                <img src="https://via.placeholder.com/400x250" alt="Autonomous Medical Robot" class="project-img">
+                <div class="project-img-container">
+                    <img src="fullproduct.jpg" alt="Autonomous Medical Robot" class="project-img">
+                </div>
                 <div class="project-info">
                     <h3>Autonomous Medical Delivery Robot</h3>
-                    <p>Designed and built a robotic platform for secure medical delivery.</p>
+                    <p>Designed and built a robotic platform for secure medical delivery using Python & RasPi.</p>
                     <div class="tags"><span class="tag">Robotics</span><span class="tag">Automation</span></div>
                 </div>
             </a>
 
-            <a href="printer.html" class="project-card">
-                <img src="https://via.placeholder.com/400x250" alt="3D Printer" class="project-img">
-                <div class="project-info">
-                    <h3>3D Printer - Prusa MK4s + MMU3</h3>
-                    <p>Built and calibrated a custom 3D printer for rapid prototyping.</p>
-                    <div class="tags"><span class="tag">Hardware</span><span class="tag">Calibration</span></div>
+            <a href="drones.html" class="project-card">
+                <div class="project-img-container">
+                    <img src="drone1.JPG" alt="FPV Drones" class="project-img">
                 </div>
-            </a>
-
-            <a href="turret.html" class="project-card">
-                <img src="https://via.placeholder.com/400x250" alt="Nerf Turret" class="project-img">
                 <div class="project-info">
-                    <h3>Remote Control Nerf Gun Turret</h3>
-                    <p>Engineered a remote-operated servo turret system.</p>
-                    <div class="tags"><span class="tag">Servos</span><span class="tag">RC</span><span class="tag">Mechatronics</span></div>
-                </div>
-            </a>
-
-             <a href="drones.html" class="project-card">
-                <img src="https://via.placeholder.com/400x250" alt="Drones" class="project-img">
-                <div class="project-info">
-                    <h3>FPV Drones</h3>
-                    <p>Design and construction of various UAV platforms.</p>
+                    <h3>FPV Drones & STEM Education</h3>
+                    <p>Design and construction of high-speed UAVs and curriculum development.</p>
                     <div class="tags"><span class="tag">UAV</span><span class="tag">Flight Control</span></div>
                 </div>
             </a>
 
-            <a href="bike.html" class="project-card">
-                <img src="https://via.placeholder.com/400x250" alt="Electric Bike" class="project-img">
+            <a href="printer.html" class="project-card">
+                <div class="project-img-container">
+                    <img src="printer.jpg" alt="3D Printer" class="project-img">
+                </div>
                 <div class="project-info">
-                    <h3>Electric Bike Build</h3>
-                    <p>Conversion and battery management system integration for an electric bicycle.</p>
-                    <div class="tags"><span class="tag">Power Systems</span><span class="tag">EV</span></div>
+                    <h3>3D Printer - Prusa MK4s + MMU3</h3>
+                    <p>Assembly and calibration of a multi-material 3D printing system.</p>
+                    <div class="tags"><span class="tag">Hardware</span><span class="tag">Calibration</span></div>
                 </div>
             </a>
 
             <a href="cnc.html" class="project-card">
-                <img src="https://via.placeholder.com/400x250" alt="CNC Router" class="project-img">
+                <div class="project-img-container">
+                    <img src="cnc1.JPG" alt="CNC Router" class="project-img">
+                </div>
                 <div class="project-info">
                     <h3>Shapeoko CNC Router</h3>
                     <p>Setup and operation of CNC machinery for precision manufacturing.</p>
@@ -330,19 +457,44 @@
                 </div>
             </a>
 
+            <a href="bike.html" class="project-card">
+                <div class="project-img-container">
+                    <img src="Bike1.png" alt="Electric Bike" class="project-img">
+                </div>
+                <div class="project-info">
+                    <h3>Electric Bike Build</h3>
+                    <p>Conversion and battery management system integration for an electric bicycle.</p>
+                    <div class="tags"><span class="tag">Power Systems</span><span class="tag">EV</span></div>
+                </div>
+            </a>
+
+            <div class="project-card coming-soon">
+                <div class="project-img-container">
+                    <div class="coming-soon-badge">
+                        <span class="badge-text">Coming Soon</span>
+                    </div>
+                    <img src="https://via.placeholder.com/400x250?text=Turret+System" alt="Nerf Turret" class="project-img" style="filter: grayscale(100%);">
+                </div>
+                <div class="project-info">
+                    <h3>Remote Control Nerf Gun Turret</h3>
+                    <p>Engineered a remote-operated servo turret system.</p>
+                    <div class="tags"><span class="tag">Servos</span><span class="tag">RC</span></div>
+                </div>
+            </div>
+
         </div>
     </section>
 
-    <section id="coding-projects" style="background-color: #f8fafc;">
+    <section id="coding-projects" style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0;">
         <h2 class="section-title">Coding Projects</h2>
         <div class="project-grid">
             <div class="project-card" style="cursor: default;">
                 <div class="project-info">
                     <h3>Code Portfolio</h3>
-                    <p>A collection of scripts, algorithms, and software tools.</p>
+                    <p>A collection of scripts, algorithms, and software tools developed during coursework and internships.</p>
                     <div class="tags"><span class="tag">Python</span><span class="tag">C++</span><span class="tag">Java</span></div>
                     <br>
-                    <a href="https://github.com/Shunky59" target="_blank" class="btn" style="font-size: 0.9rem;">View GitHub Profile</a>
+                    <a href="https://github.com/Shunky59" target="_blank" class="btn" style="font-size: 0.9rem; background: var(--primary-color); color: white;">View GitHub Profile</a>
                 </div>
             </div>
         </div>
@@ -363,9 +515,13 @@
                     </div>
                 </div>
             </div>
+            
             <div class="job">
                 <div class="job-header">
-                    <div><span class="job-company">Lehigh University</span><span class="job-title">Mountaintop Research Associate</span></div>
+                    <div>
+                        <span class="job-company">Lehigh University</span>
+                        <span class="job-title">Mountaintop Research Associate</span>
+                    </div>
                     <span class="job-date">May 2023 - August 2023</span>
                 </div>
                 <ul>
@@ -373,9 +529,13 @@
                     <li>Built scale model cities with accurate buildings and signage for use with the testbed vehicles.</li>
                 </ul>
             </div>
+            
             <div class="job">
                 <div class="job-header">
-                    <div><span class="job-company">Notre Dame Rocketry Team</span><span class="job-title">Recovery Subteam Member</span></div>
+                    <div>
+                        <span class="job-company">Notre Dame Rocketry Team</span>
+                        <span class="job-title">Recovery Subteam Member</span>
+                    </div>
                     <span class="job-date">August 2023 - Present</span>
                 </div>
                 <ul>
@@ -383,9 +543,13 @@
                     <li>Designed black powder charge plate layout utilizing Fusion 360.</li>
                 </ul>
             </div>
+            
             <div class="job">
                 <div class="job-header">
-                    <div><span class="job-company">Lehigh Formula SAE Club</span><span class="job-title">Suspension Team Member</span></div>
+                    <div>
+                        <span class="job-company">Lehigh Formula SAE Club</span>
+                        <span class="job-title">Suspension Team Member</span>
+                    </div>
                     <span class="job-date">Sept 2022 - May 2023</span>
                 </div>
                 <ul>
@@ -404,7 +568,7 @@
             <a href="https://github.com/Shunky59" target="_blank" class="contact-btn">GitHub</a>
         </div>
         <br><br>
-        <p style="font-size: 0.8rem; opacity: 0.8;">&copy; 2026 David Shunk.</p>
+        <p style="font-size: 0.8rem; opacity: 0.7;">&copy; 2026 David Shunk.</p>
     </section>
 
 </body>
