@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VEX Robotics | David Shunk</title>
+    <style>
+        /* --- GLOBAL STYLES (Matched to Portfolio) --- */
+        :root {
+            --primary-color: #0c2340; /* Notre Dame Navy */
+            --gold: #ae9142; /* Notre Dame Gold */
+            --text-dark: #1f2937;
+            --text-light: #6b7280;
+            --bg-light: #f3f4f6;
+            --white: #ffffff;
+        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; color: var(--text-dark); line-height: 1.6; background-color: var(--white); }
+        a { text-decoration: none; color: inherit; }
+        
+        /* HEADER */
+        header { background: var(--white); box-shadow: 0 2px 5px rgba(0,0,0,0.1); padding: 1rem 2rem; position: sticky; top: 0; z-index: 1000;}
+        nav { max-width: 1100px; margin: auto; display: flex; justify-content: space-between; align-items: center; }
+        .logo { font-size: 1.5rem; font-weight: bold; color: var(--primary-color); }
+        .back-link { font-weight: 500; color: var(--text-light); display: flex; align-items: center; gap: 5px; }
+        .back-link:hover { color: var(--primary-color); }
+
+        /* HERO SECTION */
+        .project-hero {
+            background: linear-gradient(135deg, var(--primary-color) 0%, #1a3c6e 100%);
+            color: white;
+            padding: 6rem 2rem;
+            text-align: center;
+        }
+        .hero-tags { margin-top: 1rem; display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap; }
+        .hero-tag { border: 1px solid var(--gold); padding: 5px 15px; border-radius: 20px; font-size: 0.9rem; color: var(--gold); }
+
+        /* CONTENT CONTAINERS */
+        .container { max-width: 1000px; margin: auto; padding: 4rem 2rem; }
+        
+        /* SECTION STYLING */
+        .section-block { margin-bottom: 4rem; padding-bottom: 4rem; border-bottom: 1px solid #eee; }
+        .section-block:last-child { border-bottom: none; }
+        
+        h2 { color: var(--primary-color); font-size: 2rem; border-left: 5px solid var(--gold); padding-left: 1rem; margin-bottom: 1.5rem; }
+        h3 { color: var(--text-dark); margin-top: 2rem; margin-bottom: 0.5rem; font-size: 1.3rem; }
+        p { color: #374151; margin-bottom: 1.5rem; font-size: 1.05rem; }
+        
+        .year-badge {
+            display: inline-block;
+            background: var(--bg-light);
+            color: var(--primary-color);
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 0.85rem;
+            margin-bottom: 0.5rem;
+            border: 1px solid #e5e7eb;
+        }
+
+        /* IMAGE GRID STYLES */
+        .grid-gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; margin-top: 2rem; }
+        .gallery-item { text-align: center; }
+        .gallery-img { 
+            width: 100%; 
+            height: 250px; 
+            object-fit: cover; 
+            border-radius: 8px; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15); 
+            transition: transform 0.3s;
+            background-color: #f0f0f0; 
+        }
+        .gallery-img:hover { transform: scale(1.02); }
+        .caption { margin-top: 0.8rem; font-size: 0.9rem; color: var(--text-light); font-style: italic;}
+
+        /* LISTS */
+        ul.tech-list { list-style: none; padding-left: 0; }
+        ul.tech-list li { 
+            position: relative; 
+            padding-left: 1.5rem; 
+            margin-bottom: 0.8rem; 
+            color: #4b5563;
+        }
+        ul.tech-list li::before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            color: var(--gold);
+            font-weight: bold;
+            font-size: 1.2rem;
+            line-height: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .project-hero { padding: 4rem 1rem; }
+            .grid-gallery { grid-template-columns: 1fr; }
+            h1 { font-size: 2.2rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <nav>
+            <div class="logo"><a href="index.html">David Shunk</a></div>
+            <a href="index.html#projects" class="back-link">&larr; Back to Projects</a>
+        </nav>
+    </header>
+
+    <div class="project-hero">
+        <h1 style="font-size: 3rem; margin: 0;">VEX Robotics Competition</h1>
+        <p style="color: #cbd5e1; max-width: 600px; margin: 1rem auto;">High School Engineering Portfolio: 2019 - 2022</p>
+        <div class="hero-tags">
+            <span class="hero-tag">Mechanical Design</span>
+            <span class="hero-tag">Autonomous Systems</span>
+            <span class="hero-tag">C++ Programming</span>
+            <span class="hero-tag">Team Leadership</span>
+        </div>
+    </div>
+
+    <div class="container">
+
+        <div class="section-block">
+            <h2>Overview</h2>
+            <p>From 2019 to 2022, I served as a lead designer and builder for Team 4610W in the VEX Robotics Competition. This experience was my introduction to rigorous engineering constraints, iterative design cycles, and competitive strategy. Over three seasons, I progressed from building basic chassis systems to engineering fully autonomous robots utilizing computer vision and pneumatics.</p>
+        </div>
+
+        <div class="section-block">
+            <span class="year-badge">2021 - 2022</span>
+            <h2>VEX Tipping Point</h2>
+            
+            <h3>The Challenge</h3>
+            <p><strong>Tipping Point</strong> was played on a 12'x12' field where alliances competed to score rings on mobile goals and elevate those goals onto balanced platforms. The game required a robot capable of high-reach manipulation, heavy lifting (moving mobile goals), and precise balance for the endgame.</p>
+
+            <h3>Engineering Solution</h3>
+            <p>Our robot focused on a high-speed ring intake and a multi-stage lift system. I led the development of the "backpack" mobile goal lift, which allowed us to grab heavy scoring objectives from the rear of the robot while simultaneously intaking rings at the front.</p>
+            
+            <ul class="tech-list">
+                <li><strong>Four-Bar Linkage:</strong> Designed a custom linkage system to keep the mobile goals level during elevation to prevent rings from sliding off.</li>
+                <li><strong>Conveyor Intake:</strong> Iterated through several silicone intake designs to maximize friction and speed when collecting rings from the floor.</li>
+                <li><strong>Pneumatic Braking:</strong> Implemented pneumatic pistons to lock the lift in place during the balancing phase, conserving battery power and motor torque.</li>
+            </ul>
+
+            <div class="grid-gallery">
+                <div class="gallery-item">
+                    <img src="ringsmidgame.JPG" alt="Robot in match" class="gallery-img">
+                    <div class="caption">Mid-match performance: Scoring rings onto a neutral mobile goal.</div>
+                </div>
+                <div class="gallery-item">
+                    <img src="ringsprototype.JPG" alt="Late Prototype" class="gallery-img">
+                    <div class="caption">Late-stage prototype validation of the front intake geometry.</div>
+                </div>
+                <div class="gallery-item">
+                    <img src="ringsprototypefront.JPG" alt="Early Front Prototype" class="gallery-img">
+                    <div class="caption">Early chassis prototyping: Testing intake width and clearance.</div>
+                </div>
+                <div class="gallery-item">
+                    <img src="ringsprototypeback.JPG" alt="Early Back Prototype" class="gallery-img">
+                    <div class="caption">Rear mechanism testing for the mobile goal lift.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section-block">
+            <span class="year-badge">2020 - 2021</span>
+            <h2>VEX AI Competition (VAIC)</h2>
+            
+            <h3>The Challenge</h3>
+            <p>The <strong>VEX AI Competition</strong> was a unique, fully autonomous challenge introduced during the "Change Up" season. Unlike standard matches with driver control, these robots had to operate entirely on their own for the full match duration, communicating with each other and reacting to a dynamic field using sensor data.</p>
+
+            <h3>Engineering Solution</h3>
+            <p>I spearheaded the mechanical and pneumatic design for our AI entry. The robot needed to be larger and more robust than standard competitors to house the additional computing power (Jetson Nano), GPS sensors, and FLIR thermal cameras.</p>
+
+            <ul class="tech-list">
+                <li><strong>Custom Pneumatic Logic:</strong> Designed a complex pneumatic manifold to control intake actuation and ball indexing. This allowed for near-instantaneous switching between "intake" and "shoot" modes without motor latency.</li>
+                <li><strong>Expansion Mechanism:</strong> The robot started within an 18" cube but deployed into a larger footprint. I engineered a spring-loaded unfolding mechanism that locked rigidly into place at the start of the match.</li>
+                <li><strong>Sensor Integration:</strong> Fabricated custom 3D-printed mounts for the VEX GPS strip and depth cameras, ensuring vibration-free mounting for accurate localization.</li>
+            </ul>
+
+            <div class="grid-gallery">
+                <div class="gallery-item">
+                    <img src="aiexpanded.JPG" alt="AI Robot Expanded" class="gallery-img">
+                    <div class="caption">The fully deployed AI robot featuring dual intakes and top-mounted vision sensors.</div>
+                </div>
+                <div class="gallery-item">
+                    <img src="aiair.JPG" alt="Pneumatic System" class="gallery-img">
+                    <div class="caption">The integrated pneumatic system responsible for actuation and indexing.</div>
+                </div>
+                <div class="gallery-item">
+                    <img src="aidriveprototype.JPG" alt="Drive Prototype" class="gallery-img">
+                    <div class="caption">Initial drivetrain chassis testing for the larger 24" AI form factor.</div>
+                </div>
+                <div class="gallery-item">
+                    <img src="aifrontprototype.JPG" alt="Front Prototype" class="gallery-img">
+                    <div class="caption">Early configuration testing sensor placement and intake geometry.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section-block">
+            <span class="year-badge">2019 - 2020</span>
+            <h2>VEX Tower Takeover</h2>
+            
+            <h3>The Challenge</h3>
+            <p><strong>Tower Takeover</strong> focused on stacking cubes in vertical towers. The engineering challenge was precision stacking; robots needed to intake cubes rapidly, hold a stack of up to 10 cubes, and deposit them gently without toppling the tower.</p>
+
+            <h3>Engineering Solution: "LilMech"</h3>
+            <p>My robot, nicknamed "LilMech," utilized a Mecanum drive system for holonomic movement (strafing). This allowed us to align with cube stacks without turning the entire robot chassis, significantly reducing cycle times.</p>
+
+            <ul class="tech-list">
+                <li><strong>Holonomic Drivetrain:</strong> Implemented a 4-motor Mecanum drive, programmed with vector-based joystick control for omnidirectional movement.</li>
+                <li><strong>Deployable Tray:</strong> Designed a multi-stage folding tray that compacted the robot into the starting size limits (18"x18"x18") and unfolded to support a 4-foot vertical stack of cubes.</li>
+                <li><strong>Center of Mass Management:</strong> Carefully balanced the robot's wheelbase to prevent tipping when the heavy stack was fully extended forward.</li>
+            </ul>
+
+            <div class="grid-gallery">
+                <div class="gallery-item">
+                    <img src="lilmech1.jpeg" alt="LilMech Front" class="gallery-img">
+                    <div class="caption">"LilMech" Front View: Showing the intake rollers and folded tray.</div>
+                </div>
+                <div class="gallery-item">
+                    <img src="lilmech2.jpeg" alt="LilMech Back" class="gallery-img">
+                    <div class="caption">Rear View: Highlighting the Mecanum wheels for strafing capabilities.</div>
+                </div>
+                <div class="gallery-item">
+                    <img src="4610Wstarting.JPG" alt="Starting Position" class="gallery-img">
+                    <div class="caption">Competition Ready: The robot folded into its starting size constraints.</div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div style="text-align: center; padding: 2rem; background: var(--primary-color); color: white;">
+        <p style="margin:0; opacity: 0.8;">&copy; 2026 David Shunk</p>
+    </div>
+
+</body>
+</html>
