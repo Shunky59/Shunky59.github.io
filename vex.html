@@ -41,21 +41,13 @@
         .section-block { margin-bottom: 4rem; padding-bottom: 4rem; border-bottom: 1px solid #eee; }
         .section-block:last-child { border-bottom: none; }
         
-        h2 { color: var(--primary-color); font-size: 2rem; border-left: 5px solid var(--gold); padding-left: 1rem; margin-bottom: 1.5rem; }
+        /* Headers & Team Context */
+        h2 { color: var(--primary-color); font-size: 2rem; border-left: 5px solid var(--gold); padding-left: 1rem; margin-bottom: 0.5rem; }
+        .team-context { color: var(--text-light); font-weight: 500; margin-bottom: 1.5rem; padding-left: 1.2rem; font-size: 1.1rem; }
+        .team-context span { color: var(--gold); margin: 0 10px; }
+        
         h3 { color: var(--text-dark); margin-top: 2rem; margin-bottom: 0.5rem; font-size: 1.3rem; }
         p { color: #374151; margin-bottom: 1.5rem; font-size: 1.05rem; }
-        
-        .year-badge {
-            display: inline-block;
-            background: var(--bg-light);
-            color: var(--primary-color);
-            padding: 4px 12px;
-            border-radius: 4px;
-            font-weight: bold;
-            font-size: 0.85rem;
-            margin-bottom: 0.5rem;
-            border: 1px solid #e5e7eb;
-        }
 
         /* IMAGE GRID STYLES */
         .grid-gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; margin-top: 2rem; }
@@ -113,7 +105,7 @@
             <span class="hero-tag">Mechanical Design</span>
             <span class="hero-tag">Autonomous Systems</span>
             <span class="hero-tag">C++ Programming</span>
-            <span class="hero-tag">Team Leadership</span>
+            <span class="hero-tag">Team Collaboration</span>
         </div>
     </div>
 
@@ -121,21 +113,21 @@
 
         <div class="section-block">
             <h2>Overview</h2>
-            <p>From 2019 to 2022, I served as a lead designer and builder for Team 4610W in the VEX Robotics Competition. This experience was my introduction to rigorous engineering constraints, iterative design cycles, and competitive strategy. Over three seasons, I progressed from building basic chassis systems to engineering fully autonomous robots utilizing computer vision and pneumatics.</p>
+            <p>From 2019 to 2022, I was a dedicated member of <strong>Team 4610W</strong> in the VEX Robotics Competition. Working collaboratively with my teammates, I contributed to the design, build, and programming of competitive robots. This experience introduced me to rigorous engineering constraints, iterative design cycles, and the importance of teamwork in executing complex strategies.</p>
         </div>
 
         <div class="section-block">
-            <span class="year-badge">2021 - 2022</span>
             <h2>VEX Tipping Point</h2>
+            <div class="team-context">Team 4610W <span>|</span> 2021 - 2022</div>
             
             <h3>The Challenge</h3>
             <p><strong>Tipping Point</strong> was played on a 12'x12' field where alliances competed to score rings on mobile goals and elevate those goals onto balanced platforms. The game required a robot capable of high-reach manipulation, heavy lifting (moving mobile goals), and precise balance for the endgame.</p>
 
-            <h3>Engineering Solution</h3>
-            <p>Our robot focused on a high-speed ring intake and a multi-stage lift system. I led the development of the "backpack" mobile goal lift, which allowed us to grab heavy scoring objectives from the rear of the robot while simultaneously intaking rings at the front.</p>
+            <h3>Engineering Contributions</h3>
+            <p>I worked with the team to develop a robot focused on a high-speed ring intake and a multi-stage lift system. My primary focus was the "backpack" mobile goal lift, which allowed us to grab heavy scoring objectives from the rear of the robot while simultaneously intaking rings at the front.</p>
             
             <ul class="tech-list">
-                <li><strong>Four-Bar Linkage:</strong> Designed a custom linkage system to keep the mobile goals level during elevation to prevent rings from sliding off.</li>
+                <li><strong>Four-Bar Linkage:</strong> Assisted in the design of a custom linkage system to keep the mobile goals level during elevation to prevent rings from sliding off.</li>
                 <li><strong>Conveyor Intake:</strong> Iterated through several silicone intake designs to maximize friction and speed when collecting rings from the floor.</li>
                 <li><strong>Pneumatic Braking:</strong> Implemented pneumatic pistons to lock the lift in place during the balancing phase, conserving battery power and motor torque.</li>
             </ul>
@@ -143,7 +135,7 @@
             <div class="grid-gallery">
                 <div class="gallery-item">
                     <img src="ringsmidgame.JPG" alt="Robot in match" class="gallery-img">
-                    <div class="caption">Mid-match performance: Scoring rings onto a neutral mobile goal.</div>
+                    <div class="caption">Mid-match performance: Scoring rings onto a blue alliance mobile goal.</div>
                 </div>
                 <div class="gallery-item">
                     <img src="ringsprototype.JPG" alt="Late Prototype" class="gallery-img">
@@ -161,17 +153,17 @@
         </div>
 
         <div class="section-block">
-            <span class="year-badge">2020 - 2021</span>
             <h2>VEX AI Competition (VAIC)</h2>
+            <div class="team-context">Team 4610W <span>|</span> 2020 - 2021</div>
             
             <h3>The Challenge</h3>
             <p>The <strong>VEX AI Competition</strong> was a unique, fully autonomous challenge introduced during the "Change Up" season. Unlike standard matches with driver control, these robots had to operate entirely on their own for the full match duration, communicating with each other and reacting to a dynamic field using sensor data.</p>
 
-            <h3>Engineering Solution</h3>
-            <p>I spearheaded the mechanical and pneumatic design for our AI entry. The robot needed to be larger and more robust than standard competitors to house the additional computing power (Jetson Nano), GPS sensors, and FLIR thermal cameras.</p>
+            <h3>Engineering Contributions</h3>
+            <p>I spearheaded the mechanical and pneumatic subsystems for our AI entry. The robot needed to be larger and more robust than standard competitors to house the additional computing power (Jetson Nano), GPS sensors, and FLIR thermal cameras.</p>
 
             <ul class="tech-list">
-                <li><strong>Custom Pneumatic Logic:</strong> Designed a complex pneumatic manifold to control intake actuation and ball indexing. This allowed for near-instantaneous switching between "intake" and "shoot" modes without motor latency.</li>
+                <li><strong>Pneumatic Intake Actuation:</strong> Designed a pneumatic system specifically to actuate the intake ball rollers. This allowed the intakes to deploy or retract on command to manage ball possession and interact with game objects effectively.</li>
                 <li><strong>Expansion Mechanism:</strong> The robot started within an 18" cube but deployed into a larger footprint. I engineered a spring-loaded unfolding mechanism that locked rigidly into place at the start of the match.</li>
                 <li><strong>Sensor Integration:</strong> Fabricated custom 3D-printed mounts for the VEX GPS strip and depth cameras, ensuring vibration-free mounting for accurate localization.</li>
             </ul>
@@ -183,7 +175,7 @@
                 </div>
                 <div class="gallery-item">
                     <img src="aiair.JPG" alt="Pneumatic System" class="gallery-img">
-                    <div class="caption">The integrated pneumatic system responsible for actuation and indexing.</div>
+                    <div class="caption">The integrated pneumatic system responsible for intake roller actuation.</div>
                 </div>
                 <div class="gallery-item">
                     <img src="aidriveprototype.JPG" alt="Drive Prototype" class="gallery-img">
@@ -197,8 +189,8 @@
         </div>
 
         <div class="section-block">
-            <span class="year-badge">2019 - 2020</span>
             <h2>VEX Tower Takeover</h2>
+            <div class="team-context">Team 4610W <span>|</span> 2019 - 2020</div>
             
             <h3>The Challenge</h3>
             <p><strong>Tower Takeover</strong> focused on stacking cubes in vertical towers. The engineering challenge was precision stacking; robots needed to intake cubes rapidly, hold a stack of up to 10 cubes, and deposit them gently without toppling the tower.</p>
@@ -214,12 +206,12 @@
 
             <div class="grid-gallery">
                 <div class="gallery-item">
-                    <img src="lilmech1.jpeg" alt="LilMech Front" class="gallery-img">
-                    <div class="caption">"LilMech" Front View: Showing the intake rollers and folded tray.</div>
+                    <img src="lilmech2.jpeg" alt="LilMech Front View" class="gallery-img">
+                    <div class="caption">Front view highlighting the intake rollers and the tray's stacking alignment.</div>
                 </div>
                 <div class="gallery-item">
-                    <img src="lilmech2.jpeg" alt="LilMech Back" class="gallery-img">
-                    <div class="caption">Rear View: Highlighting the Mecanum wheels for strafing capabilities.</div>
+                    <img src="lilmech1.jpeg" alt="LilMech Back View" class="gallery-img">
+                    <div class="caption">Rear view showing the deployed tray mechanism and custom 3D printed nameplate.</div>
                 </div>
                 <div class="gallery-item">
                     <img src="4610Wstarting.JPG" alt="Starting Position" class="gallery-img">
