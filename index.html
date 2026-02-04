@@ -111,7 +111,6 @@
             align-items: center;
             justify-content: center;
             text-align: center;
-            /* Updated to Dark Navy Gradient to match sub-pages */
             background: linear-gradient(135deg, var(--primary-color) 0%, #1a3c6e 100%);
             padding: 0 2rem;
             padding-top: 60px;
@@ -183,7 +182,6 @@
             width: 100%;
         }
         
-        /* Gold Underline for Titles */
         .section-title::after {
             content: "";
             display: block;
@@ -217,7 +215,7 @@
         .project-card:hover { 
             transform: translateY(-8px); 
             box-shadow: 0 12px 24px rgba(0,0,0,0.1);
-            border-color: var(--gold); /* Gold border on hover */
+            border-color: var(--gold);
         }
 
         .project-img-container {
@@ -225,6 +223,7 @@
             height: 220px;
             overflow: hidden;
             position: relative;
+            background: #e2e8f0; /* Fallback color */
         }
 
         .project-img {
@@ -261,7 +260,7 @@
         /* "Coming Soon" styling */
         .project-card.coming-soon {
             cursor: default;
-            pointer-events: none; /* Disable clicking */
+            pointer-events: none;
             opacity: 0.8;
         }
 
@@ -300,7 +299,6 @@
             max-width: 800px;
             margin: auto;
             background: var(--white);
-            /* Removed the border box look, made it cleaner */
         }
         .job { 
             margin-bottom: 2rem; 
@@ -500,15 +498,44 @@
     <section id="coding-projects" style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0;">
         <h2 class="section-title">Coding Projects</h2>
         <div class="project-grid">
-            <div class="project-card" style="cursor: default;">
-                <div class="project-info">
-                    <h3>Code Portfolio</h3>
-                    <p>A collection of scripts, algorithms, and software tools developed during coursework and internships.</p>
-                    <div class="tags"><span class="tag">Python</span><span class="tag">C++</span><span class="tag">Java</span></div>
-                    <br>
-                    <a href="https://github.com/Shunky59" target="_blank" class="btn" style="font-size: 0.9rem; background: var(--primary-color); color: white;">View GitHub Profile</a>
+            
+            <a href="https://github.com/Shunky59/3-Body-Problem" target="_blank" class="project-card">
+                <div class="project-img-container">
+                    <img src="https://via.placeholder.com/400x250/0c2340/ffffff?text=3-Body+Simulation" alt="3-Body Simulation" class="project-img">
                 </div>
-            </div>
+                <div class="project-info">
+                    <h3>3-Body Problem Simulation</h3>
+                    <p>Computational physics simulation visualizing the gravitational interaction between three celestial bodies.</p>
+                    <div class="tags"><span class="tag">Python</span><span class="tag">Physics</span><span class="tag">Simulation</span></div>
+                </div>
+            </a>
+
+            <a href="https://github.com/Shunky59/Solar-System-Simulation" target="_blank" class="project-card">
+                <div class="project-img-container">
+                    <img src="https://via.placeholder.com/400x250/0c2340/ffffff?text=Solar+System" alt="Solar System" class="project-img">
+                </div>
+                <div class="project-info">
+                    <h3>Solar System Simulation</h3>
+                    <p>Scale model simulation of the solar system calculating planetary orbits and positions.</p>
+                    <div class="tags"><span class="tag">Python</span><span class="tag">Astronomy</span><span class="tag">Matplotlib</span></div>
+                </div>
+            </a>
+
+            <a href="https://github.com/Shunky59/Ballistic-Aid-Delivery" target="_blank" class="project-card">
+                <div class="project-img-container">
+                    <img src="https://via.placeholder.com/400x250/0c2340/ffffff?text=Ballistic+Aid" alt="Ballistic Aid Delivery" class="project-img">
+                </div>
+                <div class="project-info">
+                    <h3>Ballistic Aid Delivery</h3>
+                    <p>Trajectory calculation algorithms for precision air-drop delivery of humanitarian aid packages.</p>
+                    <div class="tags"><span class="tag">C++</span><span class="tag">Optimization</span><span class="tag">Dynamics</span></div>
+                </div>
+            </a>
+
+        </div>
+        
+        <div style="text-align: center; margin-top: 3rem;">
+            <a href="https://github.com/Shunky59" target="_blank" class="btn" style="background: var(--text-dark); color: white;">View Full GitHub Profile</a>
         </div>
     </section>
 
