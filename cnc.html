@@ -45,18 +45,20 @@
         p { color: #374151; margin-bottom: 1.5rem; font-size: 1.1rem; }
 
         /* IMAGE STYLES */
-        .grid-gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 2rem; margin-top: 2rem; }
+        .grid-gallery { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2rem; margin-top: 2rem; }
         
         .gallery-item { text-align: center; }
         
         .gallery-img { 
             width: 100%; 
-            height: 300px; 
+            height: auto; 
+            aspect-ratio: 1 / 1;
             object-fit: cover; 
             border-radius: 8px; 
             box-shadow: 0 4px 10px rgba(0,0,0,0.15); 
             transition: transform 0.3s;
             background-color: #f0f0f0; 
+            cursor: pointer;
         }
         .gallery-img:hover { transform: scale(1.02); }
 
@@ -67,9 +69,45 @@
             height: auto;
             border-radius: 8px;
             box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+            cursor: pointer;
+            transition: transform 0.3s;
         }
+        .feature-img:hover { transform: scale(1.02); }
 
         .caption { margin-top: 0.8rem; font-size: 0.95rem; color: var(--text-light); }
+
+        /* LIGHTBOX STYLES */
+        .lightbox {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            justify-content: center;
+            align-items: center;
+        }
+        .lightbox.active { display: flex; }
+        .lightbox-img {
+            max-width: 90%;
+            max-height: 90vh;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            object-fit: contain;
+        }
+        .lightbox-close {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            color: white;
+            font-size: 3rem;
+            cursor: pointer;
+            user-select: none;
+            transition: color 0.2s;
+        }
+        .lightbox-close:hover { color: var(--gold); }
 
         @media (max-width: 768px) {
             .project-hero { padding: 3rem 1rem; }
@@ -104,7 +142,7 @@
             <p>Safety and workflow efficiency were top priorities. I built a custom enclosure based on open-source plans to manage dust and noise. I then wired a custom control panel directly into the enclosure's frame. It features dedicated switching for the router, shop vacuum, and lighting, along with a hard-wired emergency stop button for immediate system cutoff.</p>
             
             <div style="text-align: center; margin-top: 2rem;">
-                <img src="cnc1.JPG" alt="Shapeoko CNC Setup" class="feature-img">
+                <img src="cnc1.JPG" alt="Shapeoko CNC Setup" class="feature-img" loading="lazy">
                 <div class="caption">The Shapeoko XXL inside the custom sound-dampened enclosure with integrated power controls.</div>
             </div>
         </div>
@@ -115,17 +153,17 @@
             
             <div class="grid-gallery">
                 <div class="gallery-item">
-                    <img src="garden.png" alt="Custom Garden Box" class="gallery-img">
+                    <img src="garden.png" alt="Custom Garden Box" class="gallery-img" loading="lazy">
                     <div class="caption">Custom wooden garden box with engraved signage.</div>
                 </div>
                 
                 <div class="gallery-item">
-                    <img src="deathstar.JPG" alt="Death Star Carving" class="gallery-img">
+                    <img src="deathstar.JPG" alt="Death Star Carving" class="gallery-img" loading="lazy">
                     <div class="caption">Detailed "Death Star" flat carving testing V-bit precision.</div>
                 </div>
 
                 <div class="gallery-item">
-                    <img src="beatles.png" alt="Beatles Relief" class="gallery-img">
+                    <img src="beatles.png" alt="Beatles Relief" class="gallery-img" loading="lazy">
                     <div class="caption">The Beatles relief carving.</div>
                 </div>
             </div>
@@ -136,6 +174,38 @@
     <div style="text-align: center; padding: 2rem; background: var(--primary-color); color: white;">
         <p>&copy; 2026 David Shunk</p>
     </div>
+
+    <div class="lightbox" id="lightbox">
+        <span class="lightbox-close" id="lightbox-close">&times;</span>
+        <img src="" alt="Full size image" class="lightbox-img" id="lightbox-img">
+    </div>
+
+    <script>
+        const lightbox = document.getElementById('lightbox');
+        const lightboxImg = document.getElementById('lightbox-img');
+        const closeBtn = document.getElementById('lightbox-close');
+        const galleryImages = document.querySelectorAll('.gallery-img, .feature-img');
+
+        // Open Lightbox
+        galleryImages.forEach(img => {
+            img.addEventListener('click', () => {
+                lightboxImg.src = img.src;
+                lightbox.classList.add('active');
+            });
+        });
+
+        // Close Lightbox on X click
+        closeBtn.addEventListener('click', () => {
+            lightbox.classList.remove('active');
+        });
+
+        // Close Lightbox on outside click
+        lightbox.addEventListener('click', (e) => {
+            if (e.target === lightbox) {
+                lightbox.classList.remove('active');
+            }
+        });
+    </script>
 
 </body>
 </html>
