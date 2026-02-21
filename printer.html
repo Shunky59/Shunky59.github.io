@@ -45,22 +45,27 @@
         p { color: #374151; margin-bottom: 1.5rem; font-size: 1.1rem; }
 
         /* IMAGE STYLES */
-        .grid-gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 2rem; margin-top: 2rem; }
+        /* UPDATED: Forced 2-column grid */
+        .grid-gallery { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2rem; margin-top: 2rem; }
         
         .gallery-item { text-align: center; }
         
+        /* UPDATED: Square ratio, clickable */
         .gallery-img { 
             width: 100%; 
-            height: 300px; 
+            height: auto; /* changed from fixed 300px */
+            aspect-ratio: 1 / 1; /* Forced Square */
             object-fit: cover; 
             border-radius: 8px; 
             box-shadow: 0 4px 10px rgba(0,0,0,0.15); 
             transition: transform 0.3s;
             background-color: #f0f0f0; 
+            cursor: pointer; /* Add cursor pointer */
         }
         .gallery-img:hover { transform: scale(1.02); }
 
         /* Specific class for the main workstation photo to be larger */
+        /* UPDATED: Make it clickable too, kept original aspect ratio */
         .feature-img {
             width: 100%;
             height: auto;
@@ -69,7 +74,10 @@
             border-radius: 8px;
             box-shadow: 0 4px 10px rgba(0,0,0,0.15);
             margin-bottom: 1rem;
+            cursor: pointer; /* Add cursor pointer */
+            transition: transform 0.3s;
         }
+        .feature-img:hover { transform: scale(1.02); }
 
         .caption { margin-top: 0.8rem; font-size: 0.95rem; color: var(--text-light); }
 
@@ -89,6 +97,39 @@
 
         .attribution { font-size: 0.85rem; color: var(--text-light); margin-top: 0.5rem; }
         .attribution a { text-decoration: underline; }
+
+        /* LIGHTBOX STYLES */
+        .lightbox {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            justify-content: center;
+            align-items: center;
+        }
+        .lightbox.active { display: flex; }
+        .lightbox-img {
+            max-width: 90%;
+            max-height: 90vh;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            object-fit: contain;
+        }
+        .lightbox-close {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            color: white;
+            font-size: 3rem;
+            cursor: pointer;
+            user-select: none;
+            transition: color 0.2s;
+        }
+        .lightbox-close:hover { color: var(--gold); }
 
         @media (max-width: 768px) {
             .stats-grid { grid-template-columns: 1fr; }
@@ -124,7 +165,7 @@
             <p>Recently, I performed a comprehensive overhaul, upgrading the entire system to the MK4s with the MMU3. To enable remote control and video monitoring, I integrated a Raspberry Pi running Octoprint. This allows me to manage prints from anywhere and capture time-lapses of complex builds.</p>
             
             <div style="text-align: center; margin-top: 2rem;">
-                <img src="workstation.JPG" alt="My Prusa Workstation" class="feature-img">
+                <img src="workstation.JPG" alt="My Prusa Workstation" class="feature-img" loading="lazy">
                 <div class="caption">My current workstation setup with the Prusa MK4s, soldering station, and electronics bench.</div>
             </div>
         </div>
@@ -135,7 +176,7 @@
             <p>More importantly, the enclosure helps with air quality management in my workspace. I integrated a filtration and fume extraction system to ensure a safe environment during long prototyping sessions.</p>
             
             <div style="text-align: center; margin-top: 2rem;">
-                <img src="enclosure.JPG" alt="Printer Enclosure" class="feature-img" style="max-width: 700px;">
+                <img src="enclosure.JPG" alt="Printer Enclosure" class="feature-img" style="max-width: 700px;" loading="lazy">
                 <div class="caption">The enclosure setup featuring LED lighting and fume extraction.</div>
             </div>
         </div>
@@ -146,7 +187,7 @@
             <p>The biggest challenge was actually the software. I had to manually modify the G-code generation scripts to change how the printer handles "Z-hop" movements. Instead of the standard filament retraction the printer now physically lifts the pen off the paper between drawing strokes to prevent stray ink lines.</p>
             
             <div style="text-align: center; margin-top: 2rem;">
-                <img src="plotter.JPG" alt="Pen Plotter Mod" class="gallery-img" style="max-width: 450px; height: auto;">
+                <img src="plotter.JPG" alt="Pen Plotter Mod" class="feature-img" style="max-width: 500px;" loading="lazy">
                 <div class="caption">Pen plotter installed on the 3D Printer.</div>
             </div>
         </div>
@@ -173,22 +214,22 @@
 
             <div class="grid-gallery">
                 <div class="gallery-item">
-                    <img src="ems.jpg" alt="Donation to Summit EMS" class="gallery-img">
+                    <img src="ems.jpg" alt="Donation to Summit EMS" class="gallery-img" loading="lazy">
                     <div class="caption">Delivering supplies to the Summit Emergency Squad.</div>
                 </div>
                 
                 <div class="gallery-item">
-                    <img src="doctors.jpg" alt="Doctors at Overlook" class="gallery-img">
+                    <img src="doctors.jpg" alt="Doctors at Overlook" class="gallery-img" loading="lazy">
                     <div class="caption">Staff at Overlook Medical Center wearing the shields.</div>
                 </div>
 
                 <div class="gallery-item">
-                    <img src="masks.jpg" alt="Me printing masks" class="gallery-img">
+                    <img src="masks.jpg" alt="Me printing masks" class="gallery-img" loading="lazy">
                     <div class="caption">Managing the print farm during the 24/7 production run.</div>
                 </div>
                  
                  <div class="gallery-item">
-                    <img src="doctor2.JPG" alt="More doctors at Overlook" class="gallery-img">
+                    <img src="doctor2.JPG" alt="More doctors at Overlook" class="gallery-img" loading="lazy">
                     <div class="caption">Medical staff giving the thumbs up with their new PPE.</div>
                 </div>
             </div>
@@ -206,7 +247,7 @@
             <p>In this specific instance, I was printing custom welding jigs (mounts) for the chassis team. These fixtures were critical for holding the steel frame tubes in precise alignment during the welding process, ensuring the chassis met the strict geometric tolerances required for the competition vehicle.</p>
             
             <div style="text-align: center; margin-top: 2rem;">
-                <img src="sae.JPG" alt="Lehigh Formula SAE" class="feature-img" style="max-width: 700px;">
+                <img src="sae.JPG" alt="Lehigh Formula SAE" class="feature-img" style="max-width: 700px;" loading="lazy">
                 <div class="caption">Printing chassis welding mounts in the Lehigh SAE shop.</div>
             </div>
         </div>
@@ -216,6 +257,39 @@
     <div style="text-align: center; padding: 2rem; background: var(--primary-color); color: white;">
         <p>&copy; 2026 David Shunk</p>
     </div>
+
+    <div class="lightbox" id="lightbox">
+        <span class="lightbox-close" id="lightbox-close">&times;</span>
+        <img src="" alt="Full size image" class="lightbox-img" id="lightbox-img">
+    </div>
+
+    <script>
+        const lightbox = document.getElementById('lightbox');
+        const lightboxImg = document.getElementById('lightbox-img');
+        const closeBtn = document.getElementById('lightbox-close');
+        // Select both gallery images and larger feature images
+        const galleryImages = document.querySelectorAll('.gallery-img, .feature-img');
+
+        // Open Lightbox
+        galleryImages.forEach(img => {
+            img.addEventListener('click', () => {
+                lightboxImg.src = img.src;
+                lightbox.classList.add('active');
+            });
+        });
+
+        // Close Lightbox on X click
+        closeBtn.addEventListener('click', () => {
+            lightbox.classList.remove('active');
+        });
+
+        // Close Lightbox on outside click
+        lightbox.addEventListener('click', (e) => {
+            if (e.target === lightbox) {
+                lightbox.classList.remove('active');
+            }
+        });
+    </script>
 
 </body>
 </html>
