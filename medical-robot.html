@@ -62,16 +62,18 @@
         }
 
         /* IMAGE STYLES */
-        .grid-gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 2rem; margin-top: 2rem; }
+        .grid-gallery { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2rem; margin-top: 2rem; }
         .gallery-item { text-align: center; }
         .gallery-img { 
             width: 100%; 
-            height: 300px; 
+            height: auto; 
+            aspect-ratio: 1 / 1;
             object-fit: cover; 
             border-radius: 8px; 
             box-shadow: 0 4px 10px rgba(0,0,0,0.15); 
             transition: transform 0.3s;
             background-color: #f0f0f0; 
+            cursor: pointer;
         }
         .gallery-img:hover { transform: scale(1.02); }
 
@@ -82,7 +84,10 @@
             height: auto;
             border-radius: 8px;
             box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+            cursor: pointer;
+            transition: transform 0.3s;
         }
+        .feature-img:hover { transform: scale(1.02); }
 
         /* Diagrams */
         .diagram-img {
@@ -91,7 +96,10 @@
             border: 1px solid #ddd;
             border-radius: 8px;
             box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+            cursor: pointer;
+            transition: transform 0.3s;
         }
+        .diagram-img:hover { transform: scale(1.02); }
 
         .caption { margin-top: 0.8rem; font-size: 0.95rem; color: var(--text-light); }
 
@@ -157,6 +165,39 @@
         .video-btn { background-color: #fee2e2; color: #b91c1c; border-color: #fecaca; }
         .video-btn:hover { background-color: #b91c1c; color: white; }
 
+        /* LIGHTBOX STYLES */
+        .lightbox {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            justify-content: center;
+            align-items: center;
+        }
+        .lightbox.active { display: flex; }
+        .lightbox-img {
+            max-width: 90%;
+            max-height: 90vh;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            object-fit: contain;
+        }
+        .lightbox-close {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            color: white;
+            font-size: 3rem;
+            cursor: pointer;
+            user-select: none;
+            transition: color 0.2s;
+        }
+        .lightbox-close:hover { color: var(--gold); }
+
         @media (max-width: 768px) {
             .project-hero { padding: 3rem 1rem; }
             .grid-gallery { grid-template-columns: 1fr; }
@@ -190,7 +231,7 @@
             <p>For our Senior Design Capstone, our team designed, built, and validated the Medical Express Delivery System (MEDS). The objective was to create an autonomous robot (1 ft × 1 ft) capable of navigating a hospital environment, detecting "patient" distress signals via wearable sensors, and dispensing medication.</p>
             
             <div style="text-align: center; margin-top: 2rem; margin-bottom: 2rem;">
-                <img src="fullproduct.jpg" alt="Complete MEDS System" class="feature-img">
+                <img src="fullproduct.jpg" alt="Complete MEDS System" class="feature-img" loading="lazy">
                 <div class="caption">The complete system: Autonomous Robot, Koozie Docking Station, and Patient Wearables.</div>
             </div>
 
@@ -237,11 +278,11 @@
             
             <div class="grid-gallery">
                 <div class="gallery-item">
-                    <img src="robotwiringdiagram.png" alt="Robot Wiring Diagram" class="diagram-img">
+                    <img src="robotwiringdiagram.png" alt="Robot Wiring Diagram" class="diagram-img" loading="lazy">
                     <div class="caption">Robot Wiring Diagram: Power distribution and signal flow.</div>
                 </div>
                 <div class="gallery-item">
-                    <img src="wearablewiringdiagram.png" alt="Wearable Wiring Diagram" class="diagram-img">
+                    <img src="wearablewiringdiagram.png" alt="Wearable Wiring Diagram" class="diagram-img" loading="lazy">
                     <div class="caption">Wearable Wiring Diagram: ESP32 biometrics integration.</div>
                 </div>
             </div>
@@ -281,15 +322,15 @@
             
             <div class="grid-gallery">
                 <div class="gallery-item">
-                    <img src="fullcad.png" alt="Full Robot CAD" class="gallery-img">
+                    <img src="fullcad.png" alt="Full Robot CAD" class="gallery-img" loading="lazy">
                     <div class="caption">SolidWorks Assembly including LIDAR tower and electronics bay.</div>
                 </div>
                 <div class="gallery-item">
-                    <img src="robotprototype.jpg" alt="Early Robot Chassis" class="gallery-img">
+                    <img src="robotprototype.jpg" alt="Early Robot Chassis" class="gallery-img" loading="lazy">
                     <div class="caption">Prototyping chassis to validate component fitment.</div>
                 </div>
                 <div class="gallery-item">
-                    <img src="workingrobot.png" alt="Robot Validation" class="gallery-img">
+                    <img src="workingrobot.png" alt="Robot Validation" class="gallery-img" loading="lazy">
                     <div class="caption">Final validation run on the obstacle course.</div>
                 </div>
             </div>
@@ -313,6 +354,40 @@
     <div style="text-align: center; padding: 2rem; background: var(--primary-color); color: white;">
         <p>&copy; 2026 David Shunk</p>
     </div>
+
+    <div class="lightbox" id="lightbox">
+        <span class="lightbox-close" id="lightbox-close">&times;</span>
+        <img src="" alt="Full size image" class="lightbox-img" id="lightbox-img">
+    </div>
+
+    <script>
+        const lightbox = document.getElementById('lightbox');
+        const lightboxImg = document.getElementById('lightbox-img');
+        const closeBtn = document.getElementById('lightbox-close');
+        
+        // Select gallery images, feature image, and diagrams
+        const interactiveImages = document.querySelectorAll('.gallery-img, .feature-img, .diagram-img');
+
+        // Open Lightbox
+        interactiveImages.forEach(img => {
+            img.addEventListener('click', () => {
+                lightboxImg.src = img.src;
+                lightbox.classList.add('active');
+            });
+        });
+
+        // Close Lightbox on X click
+        closeBtn.addEventListener('click', () => {
+            lightbox.classList.remove('active');
+        });
+
+        // Close Lightbox on outside click
+        lightbox.addEventListener('click', (e) => {
+            if (e.target === lightbox) {
+                lightbox.classList.remove('active');
+            }
+        });
+    </script>
 
 </body>
 </html>
