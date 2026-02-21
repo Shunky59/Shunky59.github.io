@@ -54,12 +54,14 @@
         .gallery-item { text-align: center; }
         .gallery-img { 
             width: 100%; 
-            height: 250px; 
+            height: auto;
+            aspect-ratio: 1 / 1; /* Forces the image to be a perfect square */
             object-fit: cover; 
             border-radius: 8px; 
             box-shadow: 0 4px 10px rgba(0,0,0,0.15); 
             transition: transform 0.3s;
             background-color: #f0f0f0; 
+            cursor: pointer; /* Lets the user know it's clickable */
         }
         .gallery-img:hover { transform: scale(1.02); }
         .caption { margin-top: 0.8rem; font-size: 0.9rem; color: var(--text-light); font-style: italic;}
@@ -81,6 +83,39 @@
             font-size: 1.2rem;
             line-height: 1rem;
         }
+
+        /* LIGHTBOX STYLES */
+        .lightbox {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            justify-content: center;
+            align-items: center;
+        }
+        .lightbox.active { display: flex; }
+        .lightbox-img {
+            max-width: 90%;
+            max-height: 90vh;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            object-fit: contain;
+        }
+        .lightbox-close {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            color: white;
+            font-size: 3rem;
+            cursor: pointer;
+            user-select: none;
+            transition: color 0.2s;
+        }
+        .lightbox-close:hover { color: var(--gold); }
 
         @media (max-width: 768px) {
             .project-hero { padding: 4rem 1rem; }
@@ -229,6 +264,38 @@
     <div style="text-align: center; padding: 2rem; background: var(--primary-color); color: white;">
         <p style="margin:0; opacity: 0.8;">&copy; 2026 David Shunk</p>
     </div>
+
+    <div class="lightbox" id="lightbox">
+        <span class="lightbox-close" id="lightbox-close">&times;</span>
+        <img src="" alt="Full size image" class="lightbox-img" id="lightbox-img">
+    </div>
+
+    <script>
+        const lightbox = document.getElementById('lightbox');
+        const lightboxImg = document.getElementById('lightbox-img');
+        const closeBtn = document.getElementById('lightbox-close');
+        const galleryImages = document.querySelectorAll('.gallery-img');
+
+        // Open Lightbox
+        galleryImages.forEach(img => {
+            img.addEventListener('click', () => {
+                lightboxImg.src = img.src;
+                lightbox.classList.add('active');
+            });
+        });
+
+        // Close Lightbox on X click
+        closeBtn.addEventListener('click', () => {
+            lightbox.classList.remove('active');
+        });
+
+        // Close Lightbox on outside click
+        lightbox.addEventListener('click', (e) => {
+            if (e.target === lightbox) {
+                lightbox.classList.remove('active');
+            }
+        });
+    </script>
 
 </body>
 </html>
