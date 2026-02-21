@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FPV Drones & Education | David Shunk</title>
     <style>
-        /* --- GLOBAL STYLES (Matched to medical-robot.html) --- */
+        /* --- GLOBAL STYLES --- */
         :root {
             --primary-color: #0c2340;
             --gold: #ae9142;
@@ -62,16 +62,18 @@
         }
 
         /* IMAGE STYLES */
-        .grid-gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 2rem; margin-top: 2rem; }
+        .grid-gallery { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2rem; margin-top: 2rem; }
         .gallery-item { text-align: center; }
         .gallery-img { 
             width: 100%; 
-            height: 300px; 
+            height: auto; 
+            aspect-ratio: 1 / 1;
             object-fit: cover; 
             border-radius: 8px; 
             box-shadow: 0 4px 10px rgba(0,0,0,0.15); 
             transition: transform 0.3s;
             background-color: #f0f0f0; 
+            cursor: pointer;
         }
         .gallery-img:hover { transform: scale(1.02); }
 
@@ -90,6 +92,39 @@
         }
         .stat-number { display: block; font-size: 2.2rem; font-weight: bold; color: var(--primary-color); }
         .stat-label { font-size: 0.85rem; color: var(--text-light); text-transform: uppercase; letter-spacing: 1px; }
+
+        /* LIGHTBOX STYLES */
+        .lightbox {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            justify-content: center;
+            align-items: center;
+        }
+        .lightbox.active { display: flex; }
+        .lightbox-img {
+            max-width: 90%;
+            max-height: 90vh;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            object-fit: contain;
+        }
+        .lightbox-close {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            color: white;
+            font-size: 3rem;
+            cursor: pointer;
+            user-select: none;
+            transition: color 0.2s;
+        }
+        .lightbox-close:hover { color: var(--gold); }
 
         @media (max-width: 768px) {
             .project-hero { padding: 3rem 1rem; }
@@ -143,12 +178,12 @@
 
             <div class="grid-gallery">
                 <div class="gallery-item">
-                    <img src="drone1.JPG" alt="Custom Built FPV Drone 1" class="gallery-img">
+                    <img src="drone1.JPG" alt="Custom Built FPV Drone 1" class="gallery-img" loading="lazy">
                     <div class="caption">5-inch freestyle build featuring carbon fiber frame and high-KV brushless motors.</div>
                 </div>
                 <div class="gallery-item">
-                    <img src="drone2.jpg" alt="Custom Built FPV Drone 2" class="gallery-img">
-                    <div class="caption">Larger demo build for drone deivery project.</div>
+                    <img src="drone2.jpg" alt="Custom Built FPV Drone 2" class="gallery-img" loading="lazy">
+                    <div class="caption">Larger demo build for drone delivery project.</div>
                 </div>
             </div>
         </div>
@@ -167,11 +202,11 @@
 
             <div class="grid-gallery">
                 <div class="gallery-item">
-                    <img src="drone_camp.png" alt="Drone Course Listing" class="gallery-img" style="object-fit: contain; background: white;">
+                    <img src="drone_camp.png" alt="Drone Course Listing" class="gallery-img" style="object-fit: contain; background: white;" loading="lazy">
                     <div class="caption">The official course listing I developed for the Robot Revolution program.</div>
                 </div>
                 <div class="gallery-item">
-                    <img src="drone_camp2.JPG" alt="Drone Kit Parts Layout" class="gallery-img">
+                    <img src="drone_camp2.JPG" alt="Drone Kit Parts Layout" class="gallery-img" loading="lazy">
                     <div class="caption">Component breakdown: Students learned to identify and assemble every part of the system.</div>
                 </div>
             </div>
@@ -192,6 +227,38 @@
     <div style="text-align: center; padding: 2rem; background: var(--primary-color); color: white;">
         <p>&copy; 2026 David Shunk</p>
     </div>
+
+    <div class="lightbox" id="lightbox">
+        <span class="lightbox-close" id="lightbox-close">&times;</span>
+        <img src="" alt="Full size image" class="lightbox-img" id="lightbox-img">
+    </div>
+
+    <script>
+        const lightbox = document.getElementById('lightbox');
+        const lightboxImg = document.getElementById('lightbox-img');
+        const closeBtn = document.getElementById('lightbox-close');
+        const galleryImages = document.querySelectorAll('.gallery-img');
+
+        // Open Lightbox
+        galleryImages.forEach(img => {
+            img.addEventListener('click', () => {
+                lightboxImg.src = img.src;
+                lightbox.classList.add('active');
+            });
+        });
+
+        // Close Lightbox on X click
+        closeBtn.addEventListener('click', () => {
+            lightbox.classList.remove('active');
+        });
+
+        // Close Lightbox on outside click
+        lightbox.addEventListener('click', (e) => {
+            if (e.target === lightbox) {
+                lightbox.classList.remove('active');
+            }
+        });
+    </script>
 
 </body>
 </html>
