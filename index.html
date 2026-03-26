@@ -10,6 +10,7 @@
         /* --- 1. GLOBAL STYLES --- */
         html {
             scroll-behavior: smooth;
+            scroll-padding-top: 80px; /* Prevents sticky header from covering section titles */
         }
         :root {
             --primary-color: #0c2340; /* Notre Dame Navy Blue */
@@ -55,6 +56,23 @@
             font-size: 1.5rem;
             font-weight: bold;
             color: var(--primary-color);
+        }
+
+        /* Hamburger Menu Icon (Hidden on Desktop) */
+        .hamburger {
+            display: none;
+            flex-direction: column;
+            cursor: pointer;
+            gap: 5px;
+            z-index: 1001;
+        }
+
+        .hamburger span {
+            width: 25px;
+            height: 3px;
+            background-color: var(--primary-color);
+            transition: all 0.3s ease;
+            border-radius: 3px;
         }
 
         .nav-links {
@@ -123,7 +141,6 @@
             position: relative;
         }
 
-        /* Optional Pattern Overlay */
         #home::before {
             content: "";
             position: absolute;
@@ -262,7 +279,6 @@
             border: 1px solid #e2e8f0;
         }
 
-        /* "Coming Soon" styling */
         .project-card.coming-soon {
             cursor: default;
             pointer-events: none;
@@ -365,11 +381,45 @@
             transform: translateY(-3px);
         }
 
+        /* --- 6. MOBILE RESPONSIVENESS --- */
         @media (max-width: 768px) {
             .hero-content h1 { font-size: 2.8rem; }
-            .nav-links { display: none; }
             .job-header { flex-direction: column; }
             .job-date { margin-top: 5px; margin-bottom: 10px; }
+            
+            /* Mobile Menu Setup */
+            .hamburger { display: flex; }
+            
+            .nav-links {
+                position: absolute;
+                top: 73px; /* Just below the header */
+                left: -100%; /* Hidden off-screen by default */
+                flex-direction: column;
+                background-color: var(--white);
+                width: 100%;
+                text-align: center;
+                transition: left 0.3s ease;
+                box-shadow: 0 10px 10px rgba(0,0,0,0.1);
+                padding: 2rem 0;
+                gap: 1.5rem;
+            }
+            
+            .nav-links.active {
+                left: 0; /* Slide in when active */
+            }
+
+            .dropdown-content {
+                position: static;
+                display: none;
+                box-shadow: none;
+                border-top: none;
+                background-color: #f9f9f9;
+                margin-top: 10px;
+            }
+
+            .dropdown.active .dropdown-content {
+                display: block; /* Show on mobile click */
+            }
         }
     </style>
 </head>
@@ -378,11 +428,18 @@
     <header>
         <nav>
             <div class="logo"><a href="index.html">David Shunk</a></div>
-            <ul class="nav-links">
+            
+            <div class="hamburger" id="hamburger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+
+            <ul class="nav-links" id="nav-links">
                 <li><a href="#home">Home</a></li>
                 
-                <li class="dropdown">
-                    <a href="#projects">Projects &#9662;</a>
+                <li class="dropdown" id="dropdown-menu">
+                    <a href="#projects" id="projects-link">Projects &#9662;</a>
                     <div class="dropdown-content">
                         <div class="dropdown-header">Engineering</div>
                         <a href="medical-robot.html">Autonomous Medical Robot</a>
@@ -629,5 +686,34 @@
         <p style="font-size: 0.8rem; opacity: 0.7;">&copy; 2026 David Shunk.</p>
     </section>
 
+    <script>
+        const hamburger = document.getElementById('hamburger');
+        const navLinks = document.getElementById('nav-links');
+        const dropdownMenu = document.getElementById('dropdown-menu');
+        const projectsLink = document.getElementById('projects-link');
+
+        // Toggle mobile menu open/close
+        hamburger.addEventListener('click', () => {
+            navLinks.classList.toggle('active');
+        });
+
+        // Toggle dropdown open/close on mobile
+        projectsLink.addEventListener('click', (e) => {
+            if (window.innerWidth <= 768) {
+                e.preventDefault(); // Stop it from jumping immediately if trying to open menu
+                dropdownMenu.classList.toggle('active');
+            }
+        });
+
+        // Close mobile menu when any non-dropdown link is clicked
+        document.querySelectorAll('.nav-links a:not(#projects-link)').forEach(link => {
+            link.addEventListener('click', () => {
+                if (window.innerWidth <= 768) {
+                    navLinks.classList.remove('active');
+                    dropdownMenu.classList.remove('active'); // reset dropdown too
+                }
+            });
+        });
+    </script>
 </body>
 </html>
