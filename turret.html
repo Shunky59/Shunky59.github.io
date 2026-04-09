@@ -301,17 +301,17 @@
 
     <section class="project-hero">
         <h1>Remote Control Nerf Gun Turret</h1>
-        <p>A custom-engineered, motorized defense system controlled via Bluetooth using a dual-microcontroller architecture and rigorous safety protocols.</p>
+        <p>A custom-engineered, motorized defense system controlled via Bluetooth using a dual-microcontroller architecture.</p>
     </section>
 
     <div class="project-container">
         
         <div class="content-section">
             <h2>Hardware & Mechanical Design</h2>
-            <p>The core of this build is a heavily modified <strong>Nerf Hyper Mach-100</strong> mounted on a custom 2-axis motorized gimbal. To ensure reliable power delivery for high-torque applications without relying on easily depleted batteries, the entire system is powered via an AC outlet stepping down through a 12V DC converter.</p>
+            <p>The core of this build is a heavily modified Nerf Hyper Mach-100 mounted on a custom 2-axis motorized gimbal. To ensure reliable power delivery for high-torque applications without relying on easily depleted batteries, the entire system is powered via an AC outlet stepping down through a 12V DC converter.</p>
             <ul>
-                <li><strong>Turret Movement:</strong> Controlled by two 84RPM GoBuilda YellowJacket planetary gear motors, providing the perfect balance of speed and torque to smoothly pan and tilt the heavy blaster payload. These are driven by an <strong>MDD10A</strong> high-current motor controller.</li>
-                <li><strong>Blaster Firing Mechanism:</strong> The internal flywheel and pusher motors of the Nerf gun are regulated by an <strong>L298N</strong> dual H-bridge motor controller, allowing programmatic control over firing rates and spin-up sequences.</li>
+                <li>Turret Movement: Controlled by two 84RPM GoBuilda YellowJacket planetary gear motors, providing the perfect balance of speed and torque to smoothly pan and tilt the heavy blaster payload. These are driven by an MDD10A high-current motor controller.</li>
+                <li>Blaster Firing Mechanism: The internal flywheel and pusher motors of the Nerf gun are regulated by an L298N dual H-bridge motor controller, allowing programmatic control over firing rates and spin-up sequences.</li>
             </ul>
 
             <div class="image-grid">
@@ -324,11 +324,14 @@
                     <div class="image-caption">Front View: GoBuilda YellowJacket motors actuating the frame.</div>
                 </div>
             </div>
+
+            <img src="Nerf Turret Instructions.jpg" alt="Nerf Turret Startup Instructions and Controls" class="full-width-img" style="margin-top: 2rem;">
+            <div class="image-caption">Startup sequence and Xbox Controller mapping for intuitive operation.</div>
         </div>
 
         <div class="content-section">
             <h2>Electrical Architecture</h2>
-            <p>The system utilizes a dual-microcontroller setup to separate wireless communication from strict motor control. An <strong>ESP32</strong> is dedicated to establishing and maintaining a Bluetooth connection with a wireless Xbox Controller. Once inputs are received and processed, the ESP32 transmits commands via a TX/RX Serial connection to an <strong>Arduino Mega</strong>.</p>
+            <p>The system utilizes a dual-microcontroller setup to separate wireless communication from strict motor control. An ESP32 is dedicated to establishing and maintaining a Bluetooth connection with a wireless Xbox Controller. Once inputs are received and processed, the ESP32 transmits commands via a TX/RX Serial connection to an Arduino Mega.</p>
             <p>The Arduino Mega serves as the master hardware controller, interpreting the serial commands to physically drive the MDD10A and L298N motor drivers, ensuring that motor actuation doesn't interrupt the wireless communication loop.</p>
             
             <img src="Nerf Gun Turret Wiring Diagram.jpg" alt="Wiring diagram for the dual microcontroller system" class="full-width-img">
@@ -339,13 +342,10 @@
             <h2>Software Logic & Advanced Safeguards</h2>
             <p>Because the system handles high-RPM flywheels and powerful geared motors, sophisticated code logic was implemented to prevent jams, protect the hardware, and provide user feedback.</p>
             <ul>
-                <li><strong>7-Second Flywheel Spin-Up Delay:</strong> When the fire sequence is initiated, the code enforces a strict 7-second timer before the pusher motor engages. This guarantees the flywheels have reached maximum RPM, preventing dart jams and motor burnout caused by feeding rounds too early.</li>
-                <li><strong>Haptic Rumble Feedback:</strong> The ESP32 utilizes the Xbox controller's built-in rumble motors to communicate system states. The controller vibrates to confirm connection, indicates when safety modes are toggled, and provides haptic feedback during the spin-up and firing phases.</li>
-                <li><strong>Safety Lockouts:</strong> Explicit safety toggle states are programmed into the controller layout. The turret cannot be fired accidentally; the safety must be disengaged via a specific button sequence, ensuring safe operation during startup and standby.</li>
+                <li>7-Second Flywheel Spin-Up Delay: When the fire sequence is initiated, the code enforces a strict 7-second timer before the pusher motor engages. This guarantees the flywheels have reached maximum RPM, preventing dart jams and motor burnout caused by feeding rounds too early.</li>
+                <li>Haptic Rumble Feedback: The ESP32 utilizes the Xbox controller's built-in rumble motors to communicate system states. The controller vibrates to confirm connection, indicates when safety modes are toggled, and provides haptic feedback during the spin-up and firing phases.</li>
+                <li>Safety Lockouts: Explicit safety toggle states are programmed into the controller layout. The turret cannot be fired accidentally; the safety must be disengaged via a specific button sequence, ensuring safe operation during startup and standby.</li>
             </ul>
-
-            <img src="Nerf Turret Instructions.jpg" alt="Nerf Turret Startup Instructions and Controls" class="full-width-img">
-            <div class="image-caption">Startup sequence and Xbox Controller mapping for intuitive operation.</div>
 
             <div class="github-container">
                 <a href="https://github.com/Shunky59/Nerf-Gun-Turret" target="_blank" class="btn">View the Code on GitHub</a>
