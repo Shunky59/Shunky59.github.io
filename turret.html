@@ -226,6 +226,7 @@
             display: inline-block;
             box-shadow: 0 4px 6px rgba(0,0,0,0.2);
             text-align: center;
+            margin-top: 1rem;
         }
 
         .btn:hover { 
@@ -236,7 +237,8 @@
 
         .github-container {
             text-align: center;
-            margin-top: 2rem;
+            margin-top: 3rem;
+            margin-bottom: 2rem;
         }
 
         /* --- FOOTER --- */
@@ -346,10 +348,27 @@
                 <li>Haptic Rumble Feedback: The ESP32 utilizes the Xbox controller's built-in rumble motors to communicate system states. The controller vibrates to confirm connection, indicates when safety modes are toggled, and provides haptic feedback during the spin-up and firing phases.</li>
                 <li>Safety Lockouts: Explicit safety toggle states are programmed into the controller layout. The turret cannot be fired accidentally; the safety must be disengaged via a specific button sequence, ensuring safe operation during startup and standby.</li>
             </ul>
+        </div>
 
-            <div class="github-container">
-                <a href="https://github.com/Shunky59/Nerf-Gun-Turret" target="_blank" class="btn">View the Code on GitHub</a>
+        <div class="content-section">
+            <h2>Build Process & Modifications</h2>
+            <p>Constructing the turret required significant physical modifications to the original Nerf blaster and careful assembly of the mounting hardware. The base plate was designed and assembled with the completed wiring, a slip gear for continuous rotation, and a heavy-duty bearing attached to support the load of the mechanism.</p>
+            <p>To integrate the blaster into the remote-controlled system, the Nerf gun was opened and stripped of its factory safety mechanisms. The internal limit switches and default motor controls were removed entirely. This provided direct access to the inside of the gun, allowing the flywheel and the hopper system to be wired straight to the external motor controllers for custom programmatic control.</p>
+
+            <div class="image-grid">
+                <div>
+                    <img src="Nerf Turret Finished Base Plate.JPG" alt="Completed base plate with wiring" class="project-image">
+                    <div class="image-caption">The finished base plate featuring completed wiring, installed slip gear, and main bearing.</div>
+                </div>
+                <div>
+                    <img src="Nerf Gun Internals.JPG" alt="Internals of the modified Nerf blaster" class="project-image">
+                    <div class="image-caption">Inside the Nerf gun: limit switches and factory controls removed to power the flywheel and hopper directly.</div>
+                </div>
             </div>
+        </div>
+
+        <div class="github-container">
+            <a href="https://github.com/Shunky59/Nerf-Gun-Turret" target="_blank" class="btn">View the Code on GitHub</a>
         </div>
 
     </div>
