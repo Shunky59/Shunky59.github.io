@@ -235,9 +235,9 @@
             box-shadow: 0 6px 12px rgba(0,0,0,0.3);
         }
 
-        .github-container {
+        .button-container {
             text-align: center;
-            margin-top: 3rem;
+            margin-top: 2rem;
             margin-bottom: 2rem;
         }
 
@@ -316,6 +316,10 @@
                 <li>Blaster Firing Mechanism: The internal flywheel and pusher motors of the Nerf gun are regulated by an L298N dual H-bridge motor controller, allowing programmatic control over firing rates and spin-up sequences.</li>
             </ul>
 
+            <div class="button-container">
+                <a href="https://github.com/Shunky59/Nerf-Gun-Turret/blob/main/Bill%20of%20Materials.xlsx" target="_blank" class="btn">View Bill of Materials</a>
+            </div>
+
             <div class="image-grid">
                 <div>
                     <img src="TurretSideView.JPG" alt="Side view of the RC Nerf Turret" class="project-image">
@@ -348,6 +352,10 @@
                 <li>Haptic Rumble Feedback: The ESP32 utilizes the Xbox controller's built-in rumble motors to communicate system states. The controller vibrates to confirm connection, indicates when safety modes are toggled, and provides haptic feedback during the spin-up and firing phases.</li>
                 <li>Safety Lockouts: Explicit safety toggle states are programmed into the controller layout. The turret cannot be fired accidentally; the safety must be disengaged via a specific button sequence, ensuring safe operation during startup and standby.</li>
             </ul>
+
+            <div class="button-container">
+                <a href="https://github.com/Shunky59/Nerf-Gun-Turret" target="_blank" class="btn">View the Code on GitHub</a>
+            </div>
         </div>
 
         <div class="content-section">
@@ -365,10 +373,6 @@
                     <div class="image-caption">Inside the Nerf gun: limit switches and factory controls removed to power the flywheel and hopper directly.</div>
                 </div>
             </div>
-        </div>
-
-        <div class="github-container">
-            <a href="https://github.com/Shunky59/Nerf-Gun-Turret" target="_blank" class="btn">View the Code on GitHub</a>
         </div>
 
     </div>
