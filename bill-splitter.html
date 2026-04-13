@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fair Share Bill Splitter | David Shunk</title>
+    <style>
+        /* --- GLOBAL STYLES (Matching Portfolio) --- */
+        :root {
+            --primary-color: #0c2340;
+            --gold: #ae9142;
+            --text-dark: #1f2937;
+            --text-light: #6b7280;
+            --bg-light: #f3f4f6;
+            --white: #ffffff;
+            --border: #e2e8f0;
+        }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            margin: 0; 
+            padding: 0; 
+            color: var(--text-dark); 
+            line-height: 1.6; 
+            background-color: var(--bg-light); 
+        }
+        a { text-decoration: none; color: inherit; }
+        
+        /* HEADER */
+        header { background: var(--white); box-shadow: 0 2px 5px rgba(0,0,0,0.1); padding: 1rem 2rem; position: sticky; top: 0; z-index: 1000;}
+        nav { max-width: 1100px; margin: auto; display: flex; justify-content: space-between; align-items: center; }
+        .logo { font-size: 1.5rem; font-weight: bold; color: var(--primary-color); }
+        .back-link { font-weight: 500; color: var(--text-light); display: flex; align-items: center; gap: 5px; }
+        .back-link:hover { color: var(--primary-color); }
+
+        /* HERO */
+        .project-hero {
+            background: linear-gradient(135deg, var(--primary-color) 0%, #1a3c6e 100%);
+            color: white;
+            padding: 4rem 2rem;
+            text-align: center;
+        }
+
+        /* APP CONTAINERS */
+        .container { max-width: 800px; margin: auto; padding: 3rem 2rem; }
+        .card { 
+            background: var(--white); 
+            padding: 24px; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05); 
+            margin-bottom: 24px; 
+            border: 1px solid var(--border);
+        }
+        
+        h2 { color: var(--primary-color); font-size: 1.75rem; border-left: 5px solid var(--gold); padding-left: 1rem; margin-top: 0; margin-bottom: 1.5rem; }
+        h3 { color: var(--text-dark); margin-top: 2rem; margin-bottom: 0.5rem; }
+        
+        /* FORM ELEMENTS */
+        label { display: block; font-weight: 600; margin-bottom: 8px; font-size: 0.95rem; color: var(--primary-color); }
+        input[type="number"], input[type="text"] { 
+            width: 100%; 
+            padding: 10px; 
+            border: 1px solid var(--border); 
+            border-radius: 6px; 
+            box-sizing: border-box; 
+            margin-bottom: 16px; 
+            font-size: 1rem;
+            font-family: inherit;
+        }
+        input:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 2px rgba(174, 145, 66, 0.2); }
+        
+        button { 
+            background-color: var(--primary-color); 
+            color: white; 
+            border: none; 
+            padding: 12px 20px; 
+            border-radius: 6px; 
+            font-weight: bold; 
+            cursor: pointer; 
+            transition: all 0.2s; 
+            width: 100%; 
+            font-size: 1rem; 
+        }
+        button:hover { background-color: #1a3c6e; transform: translateY(-1px); }
+        button.secondary { background-color: #e2e8f0; color: #475569; margin-top: 8px; }
+        button.secondary:hover { background-color: #cbd5e1; }
+        button.gold-btn { background-color: var(--gold); color: var(--primary-color); }
+        button.gold-btn:hover { background-color: #c7a74e; }
+
+        .person-container { border: 1px solid var(--border); padding: 16px; border-radius: 8px; margin-bottom: 16px; background: #fafafa; }
+        .flex-row { display: flex; gap: 12px; align-items: flex-start; }
+        .flex-row > div { flex: 1; }
+        .item-list { margin-bottom: 12px; font-size: 0.9rem; color: #475569; }
+        
+        .toggle-group { display: flex; gap: 8px; margin-bottom: 16px; }
+        .toggle-group button { flex: 1; background-color: var(--border); color: var(--text-dark); }
+        .toggle-group button.active { background-color: var(--primary-color); color: white; }
+        
+        table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 0.95rem; }
+        th, td { text-align: left; padding: 12px; border-bottom: 1px solid var(--border); }
+        th { font-weight: 600; color: var(--primary-color); background: #f8fafc; }
+        
+        .settlement-alert { background: #fffbeb; border-left: 4px solid var(--gold); padding: 16px; margin-bottom: 12px; border-radius: 0 8px 8px 0; color: var(--text-dark); }
+        .hidden { display: none; }
+
+        @media (max-width: 768px) {
+            .container { padding: 1.5rem 1rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <nav>
+            <div class="logo"><a href="index.html">David Shunk</a></div>
+            <a href="index.html#projects" class="back-link">&larr; Back to Projects</a>
+        </nav>
+    </header>
+
+    <div class="project-hero">
+        <h1 style="font-size: 2.5rem; margin: 0;">Fair Share Bill Splitter 🍽️</h1>
+        <p style="color: #cbd5e1; max-width: 600px; margin: 1rem auto;">Calculate proportional taxes, tips, and exact change for group dinners.</p>
+    </div>
+
+    <div class="container">
+        <div class="card" id="step1">
+            <h2>Step 1: Who is eating?</h2>
+            <label for="numPeople">Number of people at the table:</label>
+            <input type="number" id="numPeople" min="1" value="2">
+            <button onclick="generatePeople()" class="gold-btn">Next: Add Items</button>
+        </div>
+
+        <div class="card hidden" id="step2">
+            <h2>Step 2: What did everyone order?</h2>
+            <div id="peopleInputs"></div>
+
+            <hr style="border: 0; border-top: 1px solid var(--border); margin: 32px 0;">
+
+            <h2>Step 3: Receipt & Tip</h2>
+            <label for="receiptTotal">Total Price on Receipt (including all tax/fees):</label>
+            <input type="number" id="receiptTotal" placeholder="e.g. 115.50" step="0.01">
+
+            <label>Tip Method:</label>
+            <div class="toggle-group">
+                <button id="btnTipPct" class="active" onclick="setTipMode('pct')">Percentage (%)</button>
+                <button id="btnTipAmt" onclick="setTipMode('amt')">Flat Amount ($)</button>
+            </div>
+            
+            <label id="tipLabel" for="tipInput">Tip Percentage (%):</label>
+            <input type="number" id="tipInput" value="20" step="0.01">
+
+            <button onclick="calculateSplit()" class="gold-btn" style="margin-top: 16px;">Calculate Final Split</button>
+        </div>
+
+        <div class="card hidden" id="step3">
+            <h2>Bill Breakdown</h2>
+            <div style="overflow-x: auto;">
+                <table id="resultsTable">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Subtotal</th>
+                            <th>Tax/Fees</th>
+                            <th>Tip</th>
+                            <th>Total Owed</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div style="background: #f8fafc; padding: 16px; border-radius: 8px; margin-bottom: 24px;">
+                <p style="margin: 0 0 8px 0;"><strong>Combined Subtotal (All Items):</strong> $<span id="outSubtotal"></span></p>
+                <p style="margin: 0;"><strong>Total Tax/Fees Identified:</strong> $<span id="outTax"></span></p>
+            </div>
+            
+            <button class="gold-btn" onclick="document.getElementById('step4').classList.remove('hidden'); this.style.display='none';">Add Cash Payments & Calculate Debts</button>
+        </div>
+
+        <div class="card hidden" id="step4">
+            <h2>Who paid what?</h2>
+            <p style="font-size: 0.95rem; color: var(--text-light); margin-bottom: 24px;">Enter how much cash/card each person put down on the table to see exactly who needs to pay whom to settle up.</p>
+            
+            <div id="paymentInputs"></div>
+            <button onclick="calculateSettlement()" style="margin-top: 16px;">Calculate Change & Debts</button>
+            
+            <div id="settlementResults" style="margin-top: 32px;"></div>
+        </div>
+    </div>
+
+    <div style="text-align: center; padding: 2rem; background: var(--primary-color); color: white; margin-top: 2rem;">
+        <p style="margin: 0; font-size: 0.9rem; opacity: 0.8;">&copy; 2026 David Shunk | Fair Share App</p>
+    </div>
+
+    <script>
+        let people = [];
+        let tipMode = 'pct';
+        let finalOwedAmounts = [];
+
+        function generatePeople() {
+            const count = parseInt(document.getElementById('numPeople').value);
+            if (count < 1) return alert("Please enter at least 1 person.");
+            
+            people = Array.from({length: count}, (_, i) => ({ id: i, name: `Person ${i+1}`, items: [] }));
+            renderPeopleInputs();
+            
+            document.getElementById('step1').classList.add('hidden');
+            document.getElementById('step2').classList.remove('hidden');
+        }
+
+        function renderPeopleInputs() {
+            const container = document.getElementById('peopleInputs');
+            container.innerHTML = '';
+
+            people.forEach((person, index) => {
+                const div = document.createElement('div');
+                div.className = 'person-container';
+                div.innerHTML = `
+                    <label>Name</label>
+                    <input type="text" value="${person.name}" onchange="updateName(${index}, this.value)">
+                    <label>Add Item Price</label>
+                    <div class="flex-row">
+                        <input type="number" id="itemInput_${index}" placeholder="e.g. 15.50" step="0.01">
+                        <button style="width: auto; padding: 10px 16px;" onclick="addItem(${index})">Add</button>
+                    </div>
+                    <div class="item-list" id="itemList_${index}">Items: None</div>
+                    <strong style="color: var(--primary-color);">Subtotal: $<span id="subtotal_${index}">0.00</span></strong>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function updateName(index, name) { people[index].name = name; }
+
+        function addItem(index) {
+            const input = document.getElementById(`itemInput_${index}`);
+            const price = parseFloat(input.value);
+            if (!isNaN(price) && price > 0) {
+                people[index].items.push(price);
+                input.value = '';
+                
+                const itemList = document.getElementById(`itemList_${index}`);
+                itemList.innerHTML = 'Items: ' + people[index].items.map(p => `$${p.toFixed(2)}`).join(' + ');
+                
+                const sub = people[index].items.reduce((a, b) => a + b, 0);
+                document.getElementById(`subtotal_${index}`).innerText = sub.toFixed(2);
+            }
+        }
+
+        function setTipMode(mode) {
+            tipMode = mode;
+            document.getElementById('btnTipPct').classList.toggle('active', mode === 'pct');
+            document.getElementById('btnTipAmt').classList.toggle('active', mode === 'amt');
+            document.getElementById('tipLabel').innerText = mode === 'pct' ? 'Tip Percentage (%):' : 'Tip Amount ($):';
+        }
+
+        function calculateSplit() {
+            const receiptTotal = parseFloat(document.getElementById('receiptTotal').value);
+            const tipInputValue = parseFloat(document.getElementById('tipInput').value);
+
+            let totalSubtotal = 0;
+            people.forEach(p => { p.subtotal = p.items.reduce((a, b) => a + b, 0); totalSubtotal += p.subtotal; });
+
+            if (totalSubtotal === 0) return alert("Please add at least one item price to someone.");
+            if (isNaN(receiptTotal) || receiptTotal < totalSubtotal) {
+                return alert("Receipt total must be entered and cannot be less than the sum of the items.");
+            }
+
+            const totalTaxAndFees = receiptTotal - totalSubtotal;
+
+            let totalTip = 0;
+            if (tipMode === 'pct') {
+                totalTip = totalSubtotal * (tipInputValue / 100);
+            } else {
+                totalTip = tipInputValue;
+            }
+
+            const tbody = document.querySelector('#resultsTable tbody');
+            tbody.innerHTML = '';
+            finalOwedAmounts = [];
+
+            people.forEach(p => {
+                const proportion = p.subtotal / totalSubtotal;
+                const pTax = totalTaxAndFees * proportion;
+                const pTip = totalTip * proportion;
+                const pTotal = p.subtotal + pTax + pTip;
+
+                finalOwedAmounts.push({ name: p.name, owed: pTotal });
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td><strong>${p.name}</strong></td>
+                        <td>$${p.subtotal.toFixed(2)}</td>
+                        <td>$${pTax.toFixed(2)}</td>
+                        <td>$${pTip.toFixed(2)}</td>
+                        <td style="color: var(--primary-color);"><strong>$${pTotal.toFixed(2)}</strong></td>
+                    </tr>
+                `;
+            });
+
+            document.getElementById('outSubtotal').innerText = totalSubtotal.toFixed(2);
+            document.getElementById('outTax').innerText = totalTaxAndFees.toFixed(2);
+            
+            document.getElementById('step3').classList.remove('hidden');
+            setupPaymentInputs();
+        }
+
+        function setupPaymentInputs() {
+            const container = document.getElementById('paymentInputs');
+            container.innerHTML = '';
+            finalOwedAmounts.forEach((p, index) => {
+                container.innerHTML += `
+                    <div class="flex-row" style="margin-bottom: 16px; align-items: center; background: #f8fafc; padding: 12px; border-radius: 8px;">
+                        <div style="flex: 2;">
+                            <strong style="color: var(--primary-color);">${p.name}</strong><br>
+                            <span style="font-size: 0.9rem; color: var(--text-light);">Owes: $${p.owed.toFixed(2)}</span>
+                        </div>
+                        <div style="flex: 1;">
+                            <input type="number" id="paid_${index}" placeholder="Amount paid" style="margin-bottom:0;" step="0.01">
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function calculateSettlement() {
+            const balances = [];
+            let totalPaid = 0;
+            let totalOwed = 0;
+
+            finalOwedAmounts.forEach((p, i) => {
+                const paid = parseFloat(document.getElementById(`paid_${i}`).value) || 0;
+                totalPaid += paid;
+                totalOwed += p.owed;
+                balances.push({ name: p.name, balance: paid - p.owed });
+            });
+
+            const resDiv = document.getElementById('settlementResults');
+            resDiv.innerHTML = '';
+
+            const changeFromRestaurant = totalPaid - totalOwed;
+            if (changeFromRestaurant > 0.01) {
+                resDiv.innerHTML += `<div class="settlement-alert"><strong>Note:</strong> The table overpaid the restaurant by <strong>$${changeFromRestaurant.toFixed(2)}</strong>. Collect this change from the server before settling debts below.</div>`;
+            } else if (changeFromRestaurant < -0.01) {
+                 resDiv.innerHTML += `<div class="settlement-alert" style="border-color: #ef4444; background: #fee2e2; color: #991b1b;"><strong>Warning:</strong> The table is short by <strong>$${Math.abs(changeFromRestaurant).toFixed(2)}</strong>! Someone needs to put in more money before leaving.</div>`;
+                 return;
+            }
+
+            let debtors = balances.filter(b => b.balance < -0.01).map(b => ({...b, balance: Math.abs(b.balance)}));
+            let creditors = balances.filter(b => b.balance > 0.01);
+
+            if (debtors.length === 0 && creditors.length === 0) {
+                resDiv.innerHTML += `<p style="color: var(--primary-color); font-weight: bold; font-size: 1.1rem; text-align: center; padding: 16px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;">Everyone is perfectly settled up!</p>`;
+                return;
+            }
+
+            resDiv.innerHTML += `<h3>How to settle the debts:</h3>`;
+            
+            let i = 0; 
+            let j = 0; 
+
+            while (i < debtors.length && j < creditors.length) {
+                let debtor = debtors[i];
+                let creditor = creditors[j];
+
+                let amount = Math.min(debtor.balance, creditor.balance);
+                
+                resDiv.innerHTML += `<div style="padding: 12px; border-bottom: 1px solid var(--border); font-size: 1.05rem;">👉 <strong>${debtor.name}</strong> must pay <strong>${creditor.name}</strong> <span style="color: var(--primary-color); font-weight: bold;">$${amount.toFixed(2)}</span></div>`;
+
+                debtor.balance -= amount;
+                creditor.balance -= amount;
+
+                if (debtor.balance < 0.01) i++;
+                if (creditor.balance < 0.01) j++;
+            }
+        }
+    </script>
+</body>
+</html>
