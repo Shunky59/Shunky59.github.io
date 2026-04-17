@@ -213,7 +213,7 @@
     
     let currentUnit = 'mm';
     let paper = { x: 0, y: 0, w: 215.9, h: 279.4, portrait: true };
-    let hw = { offX: 35.0, offY: 0.0, zCal: 10.0, zPres: 1.0 }; // Defaulting offY to 0 to simplify visually
+    let hw = { offX: 35.0, offY: 0.0, zCal: 10.0, zPres: 1.0 }; 
     let svgs = [];
     let selectedSvg = null;
     
@@ -722,8 +722,8 @@
     function generateGCode() {
         if(svgs.length === 0) { alert("Please load an object first."); return; }
         
-        // --- PRE-CHECK: Look for out-of-bounds geometries ---
-        let isOutOfBounds = false;
+        let isHardwareSquish = false;
+        let isDrawingOnAir = false;
         
         svgs.forEach(svg => {
             let scaleX = svg.w / svg.origW; let scaleY = svg.h / svg.origH;
@@ -735,20 +735,29 @@
                     let inkY = svg.y + svg.h - ((pt.y - svg.rawYmin) * scaleY);
                     let rotPt = rotatePoint(inkX, inkY, cx, cy, -svg.rot);
 
-                    // Add the offset to see where the physical nozzle has to travel
                     let checkNozX = rotPt.x + hw.offX; 
                     let checkNozY = rotPt.y + hw.offY;
 
+                    // CHECK 1: Is the Extruder Nozzle out of bounds? (Causes squishing/crashing)
                     if(checkNozX < 0 || checkNozX > BED_W || checkNozY < 0 || checkNozY > BED_H) {
-                        isOutOfBounds = true;
+                        isHardwareSquish = true;
+                    }
+
+                    // CHECK 2: Is the Pen off the edge of the steel plate? (Causes drawing on air)
+                    // We only check this if the nozzle hasn't already triggered the squish error.
+                    if(rotPt.x < 0 || rotPt.x > BED_W || rotPt.y < 0 || rotPt.y > BED_H) {
+                        isDrawingOnAir = true;
                     }
                 });
             });
         });
 
-        // Warn the user before proceeding
-        if(isOutOfBounds) {
-            let proceed = confirm("⚠️ WARNING: Parts of your drawing are outside the hardware's physical printable area!\n\nBecause the pen is offset from the nozzle, the actual drawing area is smaller than the print bed. Anything outside the red dashed box will be squished against the edges.\n\nDo you want to generate the G-Code anyway?");
+        // Hierarchy of warnings. Squishing is more mechanically relevant than drawing on air.
+        if(isHardwareSquish) {
+            let proceed = confirm("⚠️ WARNING: Part of your drawing is outside the red dashed safe zone!\n\nBecause the pen is offset from the nozzle, the actual printable area is smaller than the steel sheet. Anything outside the red box will be squished into a straight line.\n\nDo you want to generate the G-Code anyway?");
+            if(!proceed) return;
+        } else if (isDrawingOnAir) {
+            let proceed = confirm("⚠️ WARNING: Pen off the edge of the bed!\n\nThe printer hardware can safely reach this area without squishing the image, but the pen itself will be literally hanging off the edge of the 250x210mm steel sheet (drawing on the air/desk).\n\nDo you want to generate the G-Code anyway?");
             if(!proceed) return;
         }
 
