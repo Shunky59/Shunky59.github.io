@@ -167,6 +167,10 @@
             <label title="Forces near-90-degree corners to be sharp. Great for logos and text.">Sharp Corners:</label>
             <input type="checkbox" id="traceCorners" checked onchange="runImageTracer()">
         </div>
+        <div class="row">
+            <label title="Keeps or removes the outer bounding box of the image.">Draw Border:</label>
+            <input type="checkbox" id="traceBorder" checked onchange="runImageTracer()">
+        </div>
         <div style="font-size: 10px; color: #555; text-align: center; margin-top: 5px;">Changes apply automatically</div>
     </div>
 
@@ -579,7 +583,7 @@
     }
 
     // --- Core Data Parsing & Tracing ---
-    function processSVGData(svgString, isTraced = false) {
+    function processSVGData(svgString, isTraced = false, keepBorder = true) {
         const parser = new DOMParser();
         const doc = parser.parseFromString(svgString, "image/svg+xml");
         const parserSvg = document.getElementById('svgParser');
@@ -636,6 +640,43 @@
 
         if(parsedPaths.length === 0) return null;
 
+        // --- BORDER REMOVAL LOGIC ---
+        if (isTraced && !keepBorder) {
+            let totalW = xMax - xMin;
+            let totalH = yMax - yMin;
+            
+            // Filter out paths that map to the extreme edges (the background box)
+            parsedPaths = parsedPaths.filter(path => {
+                if (path.points.length === 0) return false;
+                let pxMin = Infinity, pxMax = -Infinity, pyMin = Infinity, pyMax = -Infinity;
+                path.points.forEach(pt => {
+                    pxMin = Math.min(pxMin, pt.x); pxMax = Math.max(pxMax, pt.x);
+                    pyMin = Math.min(pyMin, pt.y); pyMax = Math.max(pyMax, pt.y);
+                });
+                
+                let pw = pxMax - pxMin;
+                let ph = pyMax - pyMin;
+                
+                // If a path spans >= 95% of the total canvas size, it is treated as a bounding box and destroyed
+                if (totalW > 0 && totalH > 0 && pw >= totalW * 0.95 && ph >= totalH * 0.95) {
+                    return false; 
+                }
+                return true; 
+            });
+
+            // Recalculate true boundaries without the invisible box throwing off math
+            xMin = Infinity; xMax = -Infinity; yMin = Infinity; yMax = -Infinity;
+            parsedPaths.forEach(path => {
+                path.points.forEach(pt => {
+                    xMin = Math.min(xMin, pt.x); xMax = Math.max(xMax, pt.x);
+                    yMin = Math.min(yMin, pt.y); yMax = Math.max(yMax, pt.y);
+                });
+            });
+
+            // Failsafe incase deleting the border removed literally everything
+            if (xMin === Infinity) { xMin = 0; xMax = 10; yMin = 0; yMax = 10; }
+        }
+
         let origW = xMax - xMin; let origH = yMax - yMin;
         let scale = Math.min((paper.w * 0.8) / origW, (paper.h * 0.8) / origH);
 
@@ -684,6 +725,7 @@
 
         let pathomit = parseInt(document.getElementById('traceNoise').value);
         let sharpCorners = document.getElementById('traceCorners').checked;
+        let keepBorder = document.getElementById('traceBorder').checked;
 
         const options = { 
             ltres: ltres, 
@@ -697,7 +739,7 @@
         };
         
         ImageTracer.imageToSVG(lastRasterImage, function(svgString) {
-            let newSvg = processSVGData(svgString, true);
+            let newSvg = processSVGData(svgString, true, keepBorder);
             if(!newSvg) { alert("Tracing failed or produced no paths."); return; }
 
             if(lastTracedSvg && svgs.includes(lastTracedSvg)) {
