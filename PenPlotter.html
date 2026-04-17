@@ -555,22 +555,51 @@
         let parsedPaths = [];
         let xMin = Infinity, xMax = -Infinity, yMin = Infinity, yMax = -Infinity;
 
-        pathsElements.forEach(el => {
-            let clone = el.cloneNode(true);
-            parserSvg.appendChild(clone);
-            
-            let length = clone.getTotalLength ? clone.getTotalLength() : 0;
+        // Helper function to sample points from an individual element
+        function sampleElement(element) {
+            let length = element.getTotalLength ? element.getTotalLength() : 0;
             if(length === 0) return;
 
+            // Sample roughly every 0.5mm
             let numSamples = Math.max(10, Math.ceil(length / 0.5));
             let points = [];
-            for(let i=0; i<=numSamples; i++) {
-                let pt = clone.getPointAtLength(i/numSamples * length);
+            for(let i = 0; i <= numSamples; i++) {
+                let pt = element.getPointAtLength(i/numSamples * length);
                 points.push({x: pt.x, y: pt.y});
                 xMin = Math.min(xMin, pt.x); xMax = Math.max(xMax, pt.x);
                 yMin = Math.min(yMin, pt.y); yMax = Math.max(yMax, pt.y);
             }
             parsedPaths.push({ points: points });
+        }
+
+        pathsElements.forEach(el => {
+            if (el.tagName.toLowerCase() === 'path') {
+                let d = el.getAttribute('d');
+                if (!d) return;
+
+                // Split the path data at every "Move" command (M or m)
+                // This forces the plotter to lift the pen between disconnected shapes
+                let subPathStrings = d.split(/(?=[Mm])/);
+
+                subPathStrings.forEach(subD => {
+                    subD = subD.trim();
+                    if (!subD) return;
+
+                    let subEl = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                    subEl.setAttribute('d', subD);
+                    parserSvg.appendChild(subEl);
+                    
+                    sampleElement(subEl);
+                    
+                    parserSvg.removeChild(subEl);
+                });
+            } else {
+                // Lines, polylines, and polygons are naturally continuous
+                let clone = el.cloneNode(true);
+                parserSvg.appendChild(clone);
+                sampleElement(clone);
+                parserSvg.removeChild(clone);
+            }
         });
 
         if(parsedPaths.length === 0) return null;
@@ -617,7 +646,6 @@
     function runImageTracer() {
         if(!lastRasterImage) return;
         
-        // Map Slider 1-100 to ImageTracer resolutions (5.0 rough -> 0.1 detailed)
         let detail = parseInt(document.getElementById('traceDetail').value); 
         let ltres = 5.0 - ((detail - 1) / 99) * 4.9; 
         if(ltres < 0.1) ltres = 0.1;
@@ -630,17 +658,14 @@
             let newSvg = processSVGData(svgString, true);
             if(!newSvg) { alert("Tracing failed or produced no paths."); return; }
 
-            // If we are updating an existing trace, copy its size and position!
             if(lastTracedSvg && svgs.includes(lastTracedSvg)) {
                 newSvg.x = lastTracedSvg.x;
                 newSvg.y = lastTracedSvg.y;
                 newSvg.w = lastTracedSvg.w;
                 newSvg.h = lastTracedSvg.h;
                 newSvg.rot = lastTracedSvg.rot;
-                // Delete the old trace from the canvas
                 svgs = svgs.filter(s => s !== lastTracedSvg);
             } else {
-                // If it's brand new, drop it in the center
                 selectedSvg = newSvg;
                 centerSVG('both');
             }
