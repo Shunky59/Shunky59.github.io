@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MK4S Pen Plotter Ultimate - Web</title>
+    <style>
+        :root {
+            --bg-color: #f0f0f0;
+            --panel-bg: #ffffff;
+            --border-color: #cccccc;
+            --accent: #4CAF50;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            height: 100vh;
+            background-color: var(--bg-color);
+            overflow: hidden;
+        }
+        #left-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+        }
+        #toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            background: var(--panel-bg);
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid var(--border-color);
+        }
+        canvas {
+            flex: 1;
+            background-color: #e0e0e0;
+            border: 1px solid #000;
+            cursor: crosshair;
+            border-radius: 5px;
+        }
+        #right-panel {
+            width: 350px;
+            background-color: var(--panel-bg);
+            border-left: 1px solid var(--border-color);
+            padding: 15px;
+            overflow-y: auto;
+            box-sizing: border-box;
+        }
+        .control-group {
+            border: 1px solid var(--border-color);
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+        }
+        .control-group h3 {
+            margin-top: 0;
+            font-size: 14px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+        }
+        .row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            align-items: center;
+        }
+        input, select {
+            width: 120px;
+            padding: 4px;
+        }
+        button {
+            background-color: #e0e0e0;
+            border: 1px solid #999;
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 3px;
+        }
+        button:hover { background-color: #d0d0d0; }
+        .btn-primary { background-color: var(--accent); color: white; border: none; font-weight: bold; width: 100%; padding: 10px;}
+        .btn-primary:hover { background-color: #45a049; }
+        .btn-danger { color: red; width: 100%; margin-top: 5px;}
+    </style>
+</head>
+<body>
+
+<div id="left-panel">
+    <div id="toolbar">
+        <strong>Virtual Workspace</strong>
+        <div>
+            <button onclick="resetView()">Reset View</button>
+            <button onclick="zoomCanvas(0.8)">Zoom Out (-)</button>
+            <button onclick="zoomCanvas(1.2)">Zoom In (+)</button>
+        </div>
+    </div>
+    <div style="font-size: 12px; color: gray; margin-bottom: 5px;">Left-Click & Drag: Move/Resize | Right-Click & Drag: Pan</div>
+    <canvas id="workspace"></canvas>
+</div>
+
+<div id="right-panel">
+    <div class="control-group">
+        <h3>Workspace Setup</h3>
+        <div class="row">
+            <label>Size:</label>
+            <select id="paperPreset" onchange="applyPaperPreset()">
+                <option value="letter">Letter (8.5x11 in)</option>
+                <option value="a4">A4 (210x297 mm)</option>
+            </select>
+        </div>
+        <button onclick="toggleOrientation()" style="width: 100%">Toggle Portrait/Landscape</button>
+    </div>
+
+    <input type="file" id="fileInput" accept=".svg" style="display: none;" onchange="handleFileUpload(event)">
+    <button onclick="document.getElementById('fileInput').click()" style="width: 100%; margin-bottom: 15px; padding: 10px; background: #cccccc;">Load SVG File</button>
+
+    <div class="control-group">
+        <h3>Selected Object Tools</h3>
+        <div class="row"><label>Width (mm):</label><input type="number" id="svgW" onchange="applyTransform()"></div>
+        <div class="row"><label>Height (mm):</label><input type="number" id="svgH" onchange="applyTransform()"></div>
+        <div class="row"><label>Rotation (°):</label><input type="number" id="svgRot" onchange="applyTransform()"></div>
+        <div style="display: flex; gap: 5px; margin-bottom: 5px;">
+            <button onclick="rotateSVG(-90)" style="flex: 1">-90°</button>
+            <button onclick="rotateSVG(90)" style="flex: 1">+90°</button>
+        </div>
+        <div style="display: flex; gap: 5px;">
+            <button onclick="centerSVG('x')" style="flex: 1">Center X</button>
+            <button onclick="centerSVG('y')" style="flex: 1">Center Y</button>
+        </div>
+        <button class="btn-danger" onclick="deleteSVG()">Delete Selected</button>
+    </div>
+
+    <div class="control-group">
+        <h3>Printer Hardware (mm)</h3>
+        <div class="row"><label>Pen Offset X:</label><input type="number" id="offX" value="35.0"></div>
+        <div class="row"><label>Pen Offset Y:</label><input type="number" id="offY" value="-10.0"></div>
+        <div class="row"><label>Z Pause Height:</label><input type="number" id="zCal" value="10.0"></div>
+        <div class="row"><label>Z Pen Pressure:</label><input type="number" id="zPres" value="1.0"></div>
+    </div>
+
+    <button class="btn-primary" onclick="generateGCode()">Generate G-Code</button>
+</div>
+
+<svg id="svgParser" style="display:none;"></svg>
+
+<script>
+    // --- State Variables ---
+    const canvas = document.getElementById('workspace');
+    const ctx = canvas.getContext('2d');
+    
+    const BED_W = 250.0;
+    const BED_H = 210.0;
+    
+    let viewZoom = 2.5;
+    let viewPanX = 20.0;
+    let viewPanY = 20.0;
+    
+    let paper = { x: 0, y: 0, w: 215.9, h: 279.4, portrait: true };
+    let svgs = [];
+    let selectedSvg = null;
+    
+    let isDragging = false;
+    let dragType = null; // 'svg', 'paper', 'handle_0', etc.
+    let isPanning = false;
+    let startX, startY, startMx, startMy, startSvgW, startSvgH;
+    
+    // --- Resize Canvas ---
+    function resizeCanvas() {
+        canvas.width = canvas.parentElement.clientWidth;
+        canvas.height = canvas.parentElement.clientHeight - 40;
+        draw();
+    }
+    window.addEventListener('resize', resizeCanvas);
+
+    // --- Math & Coordinates ---
+    function toScreen(rx, ry) {
+        return {
+            x: (rx + viewPanX) * viewZoom,
+            y: (BED_H - ry + viewPanY) * viewZoom
+        };
+    }
+
+    function toReal(sx, sy) {
+        return {
+            x: (sx / viewZoom) - viewPanX,
+            y: BED_H - (sy / viewZoom) + viewPanY
+        };
+    }
+
+    function rotatePoint(x, y, cx, cy, angleDeg) {
+        let rad = angleDeg * Math.PI / 180;
+        return {
+            x: cx + (x - cx) * Math.cos(rad) - (y - cy) * Math.sin(rad),
+            y: cy + (x - cx) * Math.sin(rad) + (y - cy) * Math.cos(rad)
+        };
+    }
+
+    // --- Drawing System ---
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Draw Grid
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 1;
+        for (let i = 0; i <= BED_W; i += 10) {
+            let p1 = toScreen(i, 0), p2 = toScreen(i, BED_H);
+            ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+        }
+        for (let i = 0; i <= BED_H; i += 10) {
+            let p1 = toScreen(0, i), p2 = toScreen(BED_W, i);
+            ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+        }
+
+        // Draw Bed
+        let b1 = toScreen(0, BED_H), b2 = toScreen(BED_W, 0);
+        ctx.strokeStyle = "#444"; ctx.lineWidth = 2;
+        ctx.strokeRect(b1.x, b1.y, b2.x - b1.x, b2.y - b1.y);
+
+        // Draw Paper
+        let p1 = toScreen(paper.x, paper.y + paper.h), p2 = toScreen(paper.x + paper.w, paper.y);
+        ctx.fillStyle = "#ffffff"; ctx.fillRect(p1.x, p1.y, p2.x - p1.x, p2.y - p1.y);
+        ctx.strokeStyle = "#999"; ctx.strokeRect(p1.x, p1.y, p2.x - p1.x, p2.y - p1.y);
+
+        // Draw SVGs
+        svgs.forEach((svg, idx) => {
+            let cx = svg.x + svg.w / 2;
+            let cy = svg.y + svg.h / 2;
+
+            let handles = [
+                {x: svg.x, y: svg.y + svg.h},             // 0: BL
+                {x: svg.x + svg.w, y: svg.y + svg.h},     // 1: BR
+                {x: svg.x + svg.w, y: svg.y},             // 2: TR
+                {x: svg.x, y: svg.y},                     // 3: TL
+                {x: svg.x + svg.w / 2, y: svg.y + svg.h}, // 4: B
+                {x: svg.x + svg.w, y: svg.y + svg.h / 2}, // 5: R
+                {x: svg.x + svg.w / 2, y: svg.y},         // 6: T
+                {x: svg.x, y: svg.y + svg.h / 2}          // 7: L
+            ];
+
+            let rotatedHandles = handles.map(h => rotatePoint(h.x, h.y, cx, cy, -svg.rot));
+            let isSelected = (svg === selectedSvg);
+
+            // Bounding Box
+            ctx.strokeStyle = isSelected ? "#00cc00" : "#0066cc";
+            ctx.lineWidth = 1;
+            ctx.setLineDash([4, 4]);
+            ctx.beginPath();
+            let c0 = toScreen(rotatedHandles[0].x, rotatedHandles[0].y);
+            ctx.moveTo(c0.x, c0.y);
+            for(let i=1; i<4; i++) {
+                let p = toScreen(rotatedHandles[i].x, rotatedHandles[i].y);
+                ctx.lineTo(p.x, p.y);
+            }
+            ctx.closePath();
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Draw Paths (Sampled Points)
+            ctx.strokeStyle = isSelected ? "#00cc00" : "#0066cc";
+            ctx.lineWidth = 2;
+            let scaleX = svg.w / svg.origW;
+            let scaleY = svg.h / svg.origH;
+
+            svg.paths.forEach(path => {
+                ctx.beginPath();
+                path.points.forEach((pt, i) => {
+                    let inkX = svg.x + ((pt.x - svg.rawXmin) * scaleX);
+                    let inkY = svg.y + svg.h - ((pt.y - svg.rawYmin) * scaleY);
+                    let rotPt = rotatePoint(inkX, inkY, cx, cy, -svg.rot);
+                    let screenPt = toScreen(rotPt.x, rotPt.y);
+                    
+                    if(i === 0) ctx.moveTo(screenPt.x, screenPt.y);
+                    else ctx.lineTo(screenPt.x, screenPt.y);
+                });
+                ctx.stroke();
+            });
+
+            // Draw 8 Red Handles
+            if(isSelected) {
+                rotatedHandles.forEach((rh) => {
+                    let sp = toScreen(rh.x, rh.y);
+                    ctx.fillStyle = "#ffffff";
+                    ctx.strokeStyle = "#e60000";
+                    ctx.lineWidth = 2;
+                    ctx.fillRect(sp.x - 4, sp.y - 4, 8, 8);
+                    ctx.strokeRect(sp.x - 4, sp.y - 4, 8, 8);
+                });
+            }
+        });
+    }
+
+    // --- Interaction Physics ---
+    canvas.addEventListener('mousedown', e => {
+        if(e.button === 2 || e.button === 1) { // Right or Middle click
+            isPanning = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            return;
+        }
+
+        let rect = canvas.getBoundingClientRect();
+        let mouseX = e.clientX - rect.left;
+        let mouseY = e.clientY - rect.top;
+        let realPt = toReal(mouseX, mouseY);
+
+        // Check Handles
+        if(selectedSvg) {
+            let cx = selectedSvg.x + selectedSvg.w / 2;
+            let cy = selectedSvg.y + selectedSvg.h / 2;
+            
+            let handles = [
+                {x: selectedSvg.x, y: selectedSvg.y + selectedSvg.h},
+                {x: selectedSvg.x + selectedSvg.w, y: selectedSvg.y + selectedSvg.h},
+                {x: selectedSvg.x + selectedSvg.w, y: selectedSvg.y},
+                {x: selectedSvg.x, y: selectedSvg.y},
+                {x: selectedSvg.x + selectedSvg.w / 2, y: selectedSvg.y + selectedSvg.h},
+                {x: selectedSvg.x + selectedSvg.w, y: selectedSvg.y + selectedSvg.h / 2},
+                {x: selectedSvg.x + selectedSvg.w / 2, y: selectedSvg.y},
+                {x: selectedSvg.x, y: selectedSvg.y + selectedSvg.h / 2}
+            ];
+
+            for(let i=0; i<8; i++) {
+                let rh = rotatePoint(handles[i].x, handles[i].y, cx, cy, -selectedSvg.rot);
+                let sp = toScreen(rh.x, rh.y);
+                if(Math.abs(mouseX - sp.x) <= 6 && Math.abs(mouseY - sp.y) <= 6) {
+                    isDragging = true;
+                    dragType = 'handle_' + i;
+                    startSvgW = selectedSvg.w;
+                    startSvgH = selectedSvg.h;
+                    startMx = realPt.x;
+                    startMy = realPt.y;
+                    return;
+                }
+            }
+        }
+
+        // Check SVG Body
+        for(let i = svgs.length - 1; i >= 0; i--) {
+            let svg = svgs[i];
+            let cx = svg.x + svg.w / 2;
+            let cy = svg.y + svg.h / 2;
+            let unRotPt = rotatePoint(realPt.x, realPt.y, cx, cy, svg.rot);
+            
+            if(unRotPt.x >= svg.x && unRotPt.x <= svg.x + svg.w &&
+               unRotPt.y >= svg.y && unRotPt.y <= svg.y + svg.h) {
+                selectedSvg = svg;
+                isDragging = true;
+                dragType = 'svg';
+                startMx = realPt.x - svg.x;
+                startMy = realPt.y - svg.y;
+                updateUI();
+                draw();
+                return;
+            }
+        }
+
+        // Check Paper
+        if(realPt.x >= paper.x && realPt.x <= paper.x + paper.w &&
+           realPt.y >= paper.y && realPt.y <= paper.y + paper.h) {
+            selectedSvg = null;
+            isDragging = true;
+            dragType = 'paper';
+            startMx = realPt.x - paper.x;
+            startMy = realPt.y - paper.y;
+            updateUI();
+            draw();
+            return;
+        }
+
+        selectedSvg = null;
+        updateUI();
+        draw();
+    });
+
+    canvas.addEventListener('mousemove', e => {
+        if(isPanning) {
+            let dx = (e.clientX - startX) / viewZoom;
+            let dy = (e.clientY - startY) / viewZoom;
+            viewPanX += dx;
+            viewPanY += dy;
+            startX = e.clientX;
+            startY = e.clientY;
+            draw();
+            return;
+        }
+
+        if(!isDragging) return;
+
+        let rect = canvas.getBoundingClientRect();
+        let mouseX = e.clientX - rect.left;
+        let mouseY = e.clientY - rect.top;
+        let realPt = toReal(mouseX, mouseY);
+
+        if(dragType.startsWith('handle_')) {
+            let idx = parseInt(dragType.split('_')[1]);
+            let svg = selectedSvg;
+            let cx = svg.x + svg.w / 2;
+            let cy = svg.y + svg.h / 2;
+            let urPt = rotatePoint(realPt.x, realPt.y, cx, cy, svg.rot);
+
+            let newW = svg.w, newH = svg.h;
+
+            if(idx <= 3) { // Corners - Locked Aspect Ratio (Hypotenuse)
+                let distStart = Math.hypot(startSvgW/2, startSvgH/2);
+                let distCurr = Math.hypot(urPt.x - cx, urPt.y - cy);
+                let scale = distCurr / distStart;
+                newW = startSvgW * scale;
+                newH = startSvgH * scale;
+            } else if(idx === 4 || idx === 6) { // Top/Bot - Height Only
+                newH = 2 * Math.abs(urPt.y - cy);
+            } else if(idx === 5 || idx === 7) { // Left/Right - Width Only
+                newW = 2 * Math.abs(urPt.x - cx);
+            }
+
+            if(newW > 1 && newH > 1) {
+                svg.w = newW;
+                svg.h = newH;
+                svg.x = cx - newW / 2;
+                svg.y = cy - newH / 2;
+                updateUI();
+            }
+        } else if(dragType === 'svg') {
+            selectedSvg.x = realPt.x - startMx;
+            selectedSvg.y = realPt.y - startMy;
+        } else if(dragType === 'paper') {
+            paper.x = realPt.x - startMx;
+            paper.y = realPt.y - startMy;
+        }
+        draw();
+    });
+
+    window.addEventListener('mouseup', () => { isDragging = false; isPanning = false; });
+    canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+    // --- UI Logic ---
+    function resetView() { viewZoom = 2.5; viewPanX = 20.0; viewPanY = 20.0; draw(); }
+    function zoomCanvas(factor) { viewZoom *= factor; draw(); }
+    
+    function applyPaperPreset() {
+        let val = document.getElementById('paperPreset').value;
+        if(val === 'letter') { paper.w = 215.9; paper.h = 279.4; }
+        if(val === 'a4') { paper.w = 210.0; paper.h = 297.0; }
+        if(!paper.portrait) { let t = paper.w; paper.w = paper.h; paper.h = t; }
+        draw();
+    }
+    
+    function toggleOrientation() {
+        paper.portrait = !paper.portrait;
+        let t = paper.w; paper.w = paper.h; paper.h = t;
+        draw();
+    }
+
+    function updateUI() {
+        if(selectedSvg) {
+            document.getElementById('svgW').value = selectedSvg.w.toFixed(2);
+            document.getElementById('svgH').value = selectedSvg.h.toFixed(2);
+            document.getElementById('svgRot').value = selectedSvg.rot.toFixed(2);
+        } else {
+            document.getElementById('svgW').value = "";
+            document.getElementById('svgH').value = "";
+            document.getElementById('svgRot').value = "";
+        }
+    }
+
+    function applyTransform() {
+        if(!selectedSvg) return;
+        selectedSvg.w = parseFloat(document.getElementById('svgW').value) || selectedSvg.w;
+        selectedSvg.h = parseFloat(document.getElementById('svgH').value) || selectedSvg.h;
+        selectedSvg.rot = parseFloat(document.getElementById('svgRot').value) || selectedSvg.rot;
+        draw();
+    }
+
+    function rotateSVG(deg) {
+        if(!selectedSvg) return;
+        selectedSvg.rot = (selectedSvg.rot + deg) % 360;
+        updateUI(); draw();
+    }
+
+    function centerSVG(axis) {
+        if(!selectedSvg) return;
+        if(axis === 'x' || axis === 'both') selectedSvg.x = paper.x + (paper.w - selectedSvg.w)/2;
+        if(axis === 'y' || axis === 'both') selectedSvg.y = paper.y + (paper.h - selectedSvg.h)/2;
+        draw();
+    }
+
+    function deleteSVG() {
+        if(!selectedSvg) return;
+        svgs = svgs.filter(s => s !== selectedSvg);
+        selectedSvg = null;
+        updateUI(); draw();
+    }
+
+    // --- SVG File Parsing (The Javascript Way) ---
+    function handleFileUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(e.target.result, "image/svg+xml");
+            const parserSvg = document.getElementById('svgParser');
+            parserSvg.innerHTML = ""; 
+
+            // Extract all paths, lines, polylines, rects, circles and convert them to paths roughly
+            // For simplicity in this web port, we extract <path> elements and sample points along them
+            let pathsElements = doc.querySelectorAll('path, line, polyline, polygon');
+            let parsedPaths = [];
+            
+            let xMin = Infinity, xMax = -Infinity, yMin = Infinity, yMax = -Infinity;
+
+            pathsElements.forEach(el => {
+                // To measure accurately, we inject it into the DOM
+                let clone = el.cloneNode(true);
+                parserSvg.appendChild(clone);
+                
+                let length = clone.getTotalLength ? clone.getTotalLength() : 0;
+                if(length === 0) return;
+
+                let numSamples = Math.max(10, Math.ceil(length / 0.5));
+                let points = [];
+                for(let i=0; i<=numSamples; i++) {
+                    let pt = clone.getPointAtLength(i/numSamples * length);
+                    points.push({x: pt.x, y: pt.y});
+                    xMin = Math.min(xMin, pt.x); xMax = Math.max(xMax, pt.x);
+                    yMin = Math.min(yMin, pt.y); yMax = Math.max(yMax, pt.y);
+                }
+                parsedPaths.push({ points: points });
+            });
+
+            if(parsedPaths.length === 0) {
+                alert("No valid paths found in SVG.");
+                return;
+            }
+
+            let origW = xMax - xMin;
+            let origH = yMax - yMin;
+
+            let scale = Math.min((paper.w * 0.8) / origW, (paper.h * 0.8) / origH);
+
+            let newSvg = {
+                paths: parsedPaths,
+                origW: origW,
+                origH: origH,
+                rawXmin: xMin,
+                rawYmin: yMin,
+                x: 0, y: 0,
+                w: origW * scale,
+                h: origH * scale,
+                rot: 0
+            };
+
+            svgs.push(newSvg);
+            selectedSvg = newSvg;
+            centerSVG('both');
+            updateUI();
+            draw();
+            event.target.value = ""; // reset input
+        };
+        reader.readAsText(file);
+    }
+
+    // --- G-Code Generation ---
+    function generateGCode() {
+        if(svgs.length === 0) { alert("Please load an SVG first."); return; }
+
+        let offX = parseFloat(document.getElementById('offX').value) || 0;
+        let offY = parseFloat(document.getElementById('offY').value) || 0;
+        let zCal = parseFloat(document.getElementById('zCal').value) || 10;
+        let zPres = parseFloat(document.getElementById('zPres').value) || 1;
+        
+        let zDraw = zCal - zPres;
+        let zTravel = zCal + 5.0;
+        let speedTravel = 6000;
+        let speedDraw = 3000;
+
+        let gcode = [
+            "; --- MK4S WEB PLOTTER GCODE ---",
+            "G21 ; Set units to millimeters",
+            "G90 ; Use absolute coordinates",
+            "M104 S0 ; Extruder off",
+            "M140 S0 ; Bed off",
+            "G28 ; Home axes",
+            `G1 Z${zCal.toFixed(2)} F${speedTravel}`,
+            "M117 Insert Pen & Touch Paper",
+            "M0 Insert pen, gently touch paper, tighten mount. Click knob.",
+            `G1 Z${zTravel.toFixed(2)} F${speedTravel}`
+        ];
+
+        svgs.forEach(svg => {
+            let scaleX = svg.w / svg.origW;
+            let scaleY = svg.h / svg.origH;
+            let cx = svg.x + svg.w / 2;
+            let cy = svg.y + svg.h / 2;
+
+            svg.paths.forEach(path => {
+                if(path.points.length === 0) return;
+                
+                path.points.forEach((pt, i) => {
+                    let inkX = svg.x + ((pt.x - svg.rawXmin) * scaleX);
+                    let inkY = svg.y + svg.h - ((pt.y - svg.rawYmin) * scaleY);
+                    let rotPt = rotatePoint(inkX, inkY, cx, cy, -svg.rot);
+
+                    let nozX = rotPt.x - offX;
+                    let nozY = rotPt.y - offY;
+
+                    // Clamp to bed
+                    nozX = Math.max(0, Math.min(BED_W, nozX));
+                    nozY = Math.max(0, Math.min(BED_H, nozY));
+
+                    if(i === 0) {
+                        gcode.push(`G1 X${nozX.toFixed(3)} Y${nozY.toFixed(3)} F${speedTravel}`);
+                        gcode.push(`G1 Z${zDraw.toFixed(3)} F${speedDraw/2}`);
+                        gcode.push("G4 P200 ; Settle down");
+                    } else {
+                        gcode.push(`G1 X${nozX.toFixed(3)} Y${nozY.toFixed(3)} F${speedDraw}`);
+                    }
+                });
+                gcode.push("G4 P200 ; Settle before lift");
+                gcode.push(`G1 Z${zTravel.toFixed(3)} F${speedTravel}`);
+            });
+        });
+
+        gcode.push(`G1 Z${(zTravel + 20).toFixed(2)} F${speedTravel}`);
+        gcode.push(`G1 X0 Y210 F${speedTravel}`);
+        gcode.push("M84 ; Disable motors");
+
+        // Download Blob
+        let blob = new Blob([gcode.join("\n")], { type: 'text/plain' });
+        let url = URL.createObjectURL(blob);
+        let a = document.createElement('a');
+        a.href = url;
+        a.download = "plotter_web.gcode";
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    // Init
+    resizeCanvas();
+</script>
+</body>
+</html>
