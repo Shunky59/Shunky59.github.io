@@ -80,6 +80,10 @@
         input[type="range"] {
             width: 120px;
         }
+        input[type="checkbox"] {
+            width: auto;
+            margin-right: 100px;
+        }
         button {
             background-color: #e0e0e0;
             border: 1px solid #999;
@@ -159,7 +163,11 @@
             <label title="Ignores small clusters of pixels.">Noise Filter:</label>
             <input type="range" id="traceNoise" min="0" max="50" value="8" onchange="runImageTracer()">
         </div>
-        <div style="font-size: 10px; color: #555; text-align: center; margin-top: 5px;">Changes apply automatically on release</div>
+        <div class="row">
+            <label title="Forces near-90-degree corners to be sharp. Great for logos and text.">Sharp Corners:</label>
+            <input type="checkbox" id="traceCorners" checked onchange="runImageTracer()">
+        </div>
+        <div style="font-size: 10px; color: #555; text-align: center; margin-top: 5px;">Changes apply automatically</div>
     </div>
 
     <div class="control-group">
@@ -578,7 +586,6 @@
                 if (!d) return;
 
                 // Split the path data at every "Move" command (M or m)
-                // This forces the plotter to lift the pen between disconnected shapes
                 let subPathStrings = d.split(/(?=[Mm])/);
 
                 subPathStrings.forEach(subD => {
@@ -594,7 +601,6 @@
                     parserSvg.removeChild(subEl);
                 });
             } else {
-                // Lines, polylines, and polygons are naturally continuous
                 let clone = el.cloneNode(true);
                 parserSvg.appendChild(clone);
                 sampleElement(clone);
@@ -647,12 +653,23 @@
         if(!lastRasterImage) return;
         
         let detail = parseInt(document.getElementById('traceDetail').value); 
-        let ltres = 5.0 - ((detail - 1) / 99) * 4.9; 
-        if(ltres < 0.1) ltres = 0.1;
+        // Allow ltres to drop all the way to 0.01 for hyper-detail 
+        let ltres = 5.0 - ((detail - 1) / 99) * 4.99; 
+        if(ltres < 0.01) ltres = 0.01;
 
         let pathomit = parseInt(document.getElementById('traceNoise').value);
+        let sharpCorners = document.getElementById('traceCorners').checked;
 
-        const options = { ltres: ltres, qtres: ltres, pathomit: pathomit, colorsampling: 0, numberofcolors: 2, mincolorratio: 0, colorquantcycles: 3 };
+        const options = { 
+            ltres: ltres, 
+            qtres: ltres, 
+            pathomit: pathomit, 
+            rightangleenhance: sharpCorners,
+            colorsampling: 0, 
+            numberofcolors: 2, 
+            mincolorratio: 0, 
+            colorquantcycles: 3 
+        };
         
         ImageTracer.imageToSVG(lastRasterImage, function(svgString) {
             let newSvg = processSVGData(svgString, true);
