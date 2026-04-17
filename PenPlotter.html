@@ -213,7 +213,7 @@
     
     let currentUnit = 'mm';
     let paper = { x: 0, y: 0, w: 215.9, h: 279.4, portrait: true };
-    let hw = { offX: 35.0, offY: -10.0, zCal: 10.0, zPres: 1.0 };
+    let hw = { offX: 35.0, offY: 0.0, zCal: 10.0, zPres: 1.0 }; // Defaulting offY to 0 to simplify visually
     let svgs = [];
     let selectedSvg = null;
     
@@ -290,6 +290,7 @@
     function draw() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
+        // Draw Grid
         ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1;
         for (let i = 0; i <= BED_W; i += 10) {
             let p1 = toScreen(i, 0), p2 = toScreen(i, BED_H);
@@ -300,14 +301,38 @@
             ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
         }
 
+        // Draw Print Bed Outline
         let b1 = toScreen(0, BED_H), b2 = toScreen(BED_W, 0);
         ctx.strokeStyle = "#444"; ctx.lineWidth = 2;
         ctx.strokeRect(b1.x, b1.y, b2.x - b1.x, b2.y - b1.y);
 
+        // Draw Hardware Printable Area (Safe Zone based on offsets)
+        let safeMinX = Math.max(0, -hw.offX);
+        let safeMaxX = Math.min(BED_W, BED_W - hw.offX);
+        let safeMinY = Math.max(0, -hw.offY);
+        let safeMaxY = Math.min(BED_H, BED_H - hw.offY);
+        
+        if (safeMaxX > safeMinX && safeMaxY > safeMinY) {
+            let sP1 = toScreen(safeMinX, safeMaxY);
+            let sP2 = toScreen(safeMaxX, safeMinY);
+            
+            ctx.strokeStyle = "rgba(255, 0, 0, 0.4)";
+            ctx.lineWidth = 2;
+            ctx.setLineDash([8, 8]);
+            ctx.strokeRect(sP1.x, sP1.y, sP2.x - sP1.x, sP2.y - sP1.y);
+            ctx.setLineDash([]);
+            
+            ctx.fillStyle = "rgba(255, 0, 0, 0.5)";
+            ctx.font = "14px Arial";
+            ctx.fillText("Printable Area (Offset Applied)", sP1.x + 5, sP1.y + 18);
+        }
+
+        // Draw Paper
         let p1 = toScreen(paper.x, paper.y + paper.h), p2 = toScreen(paper.x + paper.w, paper.y);
         ctx.fillStyle = "#ffffff"; ctx.fillRect(p1.x, p1.y, p2.x - p1.x, p2.y - p1.y);
         ctx.strokeStyle = "#999"; ctx.strokeRect(p1.x, p1.y, p2.x - p1.x, p2.y - p1.y);
 
+        // Draw SVG Objects
         svgs.forEach((svg) => {
             let cx = svg.x + svg.w / 2; let cy = svg.y + svg.h / 2;
             let handles = [
@@ -495,6 +520,7 @@
         if(!isNaN(zc)) hw.zCal = toMM(zc);
         if(!isNaN(zp)) hw.zPres = toMM(zp);
         updateUI();
+        draw();
     }
 
     function updateUI() {
@@ -653,7 +679,6 @@
         if(!lastRasterImage) return;
         
         let detail = parseInt(document.getElementById('traceDetail').value); 
-        // Allow ltres to drop all the way to 0.01 for hyper-detail 
         let ltres = 5.0 - ((detail - 1) / 99) * 4.99; 
         if(ltres < 0.01) ltres = 0.01;
 
@@ -697,6 +722,37 @@
     function generateGCode() {
         if(svgs.length === 0) { alert("Please load an object first."); return; }
         
+        // --- PRE-CHECK: Look for out-of-bounds geometries ---
+        let isOutOfBounds = false;
+        
+        svgs.forEach(svg => {
+            let scaleX = svg.w / svg.origW; let scaleY = svg.h / svg.origH;
+            let cx = svg.x + svg.w / 2; let cy = svg.y + svg.h / 2;
+
+            svg.paths.forEach(path => {
+                path.points.forEach((pt) => {
+                    let inkX = svg.x + ((pt.x - svg.rawXmin) * scaleX);
+                    let inkY = svg.y + svg.h - ((pt.y - svg.rawYmin) * scaleY);
+                    let rotPt = rotatePoint(inkX, inkY, cx, cy, -svg.rot);
+
+                    // Add the offset to see where the physical nozzle has to travel
+                    let checkNozX = rotPt.x + hw.offX; 
+                    let checkNozY = rotPt.y + hw.offY;
+
+                    if(checkNozX < 0 || checkNozX > BED_W || checkNozY < 0 || checkNozY > BED_H) {
+                        isOutOfBounds = true;
+                    }
+                });
+            });
+        });
+
+        // Warn the user before proceeding
+        if(isOutOfBounds) {
+            let proceed = confirm("⚠️ WARNING: Parts of your drawing are outside the hardware's physical printable area!\n\nBecause the pen is offset from the nozzle, the actual drawing area is smaller than the print bed. Anything outside the red dashed box will be squished against the edges.\n\nDo you want to generate the G-Code anyway?");
+            if(!proceed) return;
+        }
+
+        // --- GENERATE GCODE ---
         let zDraw = hw.zCal - hw.zPres;
         let zTravel = hw.zCal + 5.0;
         let speedTravel = 6000;
@@ -727,8 +783,9 @@
                     let inkY = svg.y + svg.h - ((pt.y - svg.rawYmin) * scaleY);
                     let rotPt = rotatePoint(inkX, inkY, cx, cy, -svg.rot);
 
-                    let nozX = rotPt.x - hw.offX; let nozY = rotPt.y - hw.offY;
+                    let nozX = rotPt.x + hw.offX; let nozY = rotPt.y + hw.offY;
 
+                    // Clamp to physical bed limits so printer doesn't crash into endstops
                     nozX = Math.max(0, Math.min(BED_W, nozX)); nozY = Math.max(0, Math.min(BED_H, nozY));
 
                     if(i === 0) {
