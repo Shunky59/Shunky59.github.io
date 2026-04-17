@@ -4,12 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MK4S Pen Plotter Ultimate - Web</title>
+    <script src="https://cdn.jsdelivr.net/npm/imagetracerjs@1.2.6/imagetracer_v1.2.6.min.js"></script>
     <style>
         :root {
             --bg-color: #f0f0f0;
             --panel-bg: #ffffff;
             --border-color: #cccccc;
             --accent: #4CAF50;
+            --accent-img: #2196F3;
         }
         body {
             font-family: Arial, sans-serif;
@@ -70,10 +72,13 @@
             align-items: center;
             font-size: 14px;
         }
-        input, select {
+        input[type="text"], select {
             width: 120px;
             padding: 4px;
             box-sizing: border-box;
+        }
+        input[type="range"] {
+            width: 120px;
         }
         button {
             background-color: #e0e0e0;
@@ -85,6 +90,8 @@
         button:hover { background-color: #d0d0d0; }
         .btn-primary { background-color: var(--accent); color: white; border: none; font-weight: bold; width: 100%; padding: 10px;}
         .btn-primary:hover { background-color: #45a049; }
+        .btn-image { background-color: var(--accent-img); color: white; border: none; font-weight: bold; width: 100%; padding: 10px; margin-bottom: 5px;}
+        .btn-image:hover { background-color: #1e88e5; }
         .btn-danger { color: red; width: 100%; margin-top: 5px;}
     </style>
 </head>
@@ -134,8 +141,26 @@
         <button onclick="toggleOrientation()" style="width: 100%; margin-top: 5px;">Toggle Portrait/Landscape</button>
     </div>
 
-    <input type="file" id="fileInput" accept=".svg" style="display: none;" onchange="handleFileUpload(event)">
-    <button onclick="document.getElementById('fileInput').click()" style="width: 100%; margin-bottom: 15px; padding: 10px; background: #cccccc; font-weight: bold;">Load SVG File</button>
+    <div class="control-group" style="background: #fafafa;">
+        <input type="file" id="svgInput" accept=".svg" style="display: none;" onchange="handleSvgUpload(event)">
+        <button onclick="document.getElementById('svgInput').click()" style="width: 100%; margin-bottom: 8px; padding: 10px; font-weight: bold;">Load Vector (SVG)</button>
+        
+        <input type="file" id="imgInput" accept="image/png, image/jpeg" style="display: none;" onchange="handleImageUpload(event)">
+        <button class="btn-image" onclick="document.getElementById('imgInput').click()">Load Image (PNG/JPG)</button>
+    </div>
+
+    <div class="control-group" id="imgControls" style="display: none; background: #e3f2fd; border-color: #90caf9;">
+        <h3>Image Tracing Settings</h3>
+        <div class="row">
+            <label title="Higher = strictly follows pixels. Lower = smooth curves.">Trace Detail:</label>
+            <input type="range" id="traceDetail" min="1" max="100" value="95" onchange="runImageTracer()">
+        </div>
+        <div class="row">
+            <label title="Ignores small clusters of pixels.">Noise Filter:</label>
+            <input type="range" id="traceNoise" min="0" max="50" value="8" onchange="runImageTracer()">
+        </div>
+        <div style="font-size: 10px; color: #555; text-align: center; margin-top: 5px;">Changes apply automatically on release</div>
+    </div>
 
     <div class="control-group">
         <h3>Selected Object Tools</h3>
@@ -180,7 +205,7 @@
     
     let currentUnit = 'mm';
     let paper = { x: 0, y: 0, w: 215.9, h: 279.4, portrait: true };
-    let hw = { offX: 35.0, offY: -10.0, zCal: 10.0, zPres: 1.0 }; // Core hardware always tracks mm internally
+    let hw = { offX: 35.0, offY: -10.0, zCal: 10.0, zPres: 1.0 };
     let svgs = [];
     let selectedSvg = null;
     
@@ -188,6 +213,10 @@
     let dragType = null;
     let isPanning = false;
     let startX, startY, startMx, startMy, startSvgW, startSvgH;
+
+    // Image Tracing States
+    let lastRasterImage = null;
+    let lastTracedSvg = null;
     
     // --- Resize Canvas ---
     function resizeCanvas() {
@@ -214,7 +243,6 @@
         return parseFloat(str);
     }
 
-    // --- Unit Conversions ---
     function toMM(val) {
         if(currentUnit === 'in') return val * 25.4;
         if(currentUnit === 'cm') return val * 10.0;
@@ -235,17 +263,11 @@
     }
 
     function toScreen(rx, ry) {
-        return {
-            x: (rx + viewPanX) * viewZoom,
-            y: (BED_H - ry + viewPanY) * viewZoom
-        };
+        return { x: (rx + viewPanX) * viewZoom, y: (BED_H - ry + viewPanY) * viewZoom };
     }
 
     function toReal(sx, sy) {
-        return {
-            x: (sx / viewZoom) - viewPanX,
-            y: BED_H - (sy / viewZoom) + viewPanY
-        };
+        return { x: (sx / viewZoom) - viewPanX, y: BED_H - (sy / viewZoom) + viewPanY };
     }
 
     function rotatePoint(x, y, cx, cy, angleDeg) {
@@ -260,9 +282,7 @@
     function draw() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
-        // Draw Grid
-        ctx.strokeStyle = "#ffffff";
-        ctx.lineWidth = 1;
+        ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1;
         for (let i = 0; i <= BED_W; i += 10) {
             let p1 = toScreen(i, 0), p2 = toScreen(i, BED_H);
             ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
@@ -272,21 +292,16 @@
             ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
         }
 
-        // Draw Bed
         let b1 = toScreen(0, BED_H), b2 = toScreen(BED_W, 0);
         ctx.strokeStyle = "#444"; ctx.lineWidth = 2;
         ctx.strokeRect(b1.x, b1.y, b2.x - b1.x, b2.y - b1.y);
 
-        // Draw Paper
         let p1 = toScreen(paper.x, paper.y + paper.h), p2 = toScreen(paper.x + paper.w, paper.y);
         ctx.fillStyle = "#ffffff"; ctx.fillRect(p1.x, p1.y, p2.x - p1.x, p2.y - p1.y);
         ctx.strokeStyle = "#999"; ctx.strokeRect(p1.x, p1.y, p2.x - p1.x, p2.y - p1.y);
 
-        // Draw SVGs
         svgs.forEach((svg) => {
-            let cx = svg.x + svg.w / 2;
-            let cy = svg.y + svg.h / 2;
-
+            let cx = svg.x + svg.w / 2; let cy = svg.y + svg.h / 2;
             let handles = [
                 {x: svg.x, y: svg.y + svg.h}, {x: svg.x + svg.w, y: svg.y + svg.h}, {x: svg.x + svg.w, y: svg.y}, {x: svg.x, y: svg.y},
                 {x: svg.x + svg.w / 2, y: svg.y + svg.h}, {x: svg.x + svg.w, y: svg.y + svg.h / 2}, {x: svg.x + svg.w / 2, y: svg.y}, {x: svg.x, y: svg.y + svg.h / 2}
@@ -296,23 +311,18 @@
             let isSelected = (svg === selectedSvg);
 
             ctx.strokeStyle = isSelected ? "#00cc00" : "#0066cc";
-            ctx.lineWidth = 1;
-            ctx.setLineDash([4, 4]);
-            ctx.beginPath();
+            ctx.lineWidth = 1; ctx.setLineDash([4, 4]); ctx.beginPath();
             let c0 = toScreen(rotatedHandles[0].x, rotatedHandles[0].y);
             ctx.moveTo(c0.x, c0.y);
             for(let i=1; i<4; i++) {
                 let p = toScreen(rotatedHandles[i].x, rotatedHandles[i].y);
                 ctx.lineTo(p.x, p.y);
             }
-            ctx.closePath();
-            ctx.stroke();
-            ctx.setLineDash([]);
+            ctx.closePath(); ctx.stroke(); ctx.setLineDash([]);
 
-            ctx.strokeStyle = isSelected ? "#00cc00" : "#0066cc";
-            ctx.lineWidth = 2;
-            let scaleX = svg.w / svg.origW;
-            let scaleY = svg.h / svg.origH;
+            ctx.strokeStyle = isSelected ? "#00cc00" : "#000000";
+            ctx.lineWidth = 1.5;
+            let scaleX = svg.w / svg.origW; let scaleY = svg.h / svg.origH;
 
             svg.paths.forEach(path => {
                 ctx.beginPath();
@@ -331,11 +341,8 @@
             if(isSelected) {
                 rotatedHandles.forEach((rh) => {
                     let sp = toScreen(rh.x, rh.y);
-                    ctx.fillStyle = "#ffffff";
-                    ctx.strokeStyle = "#e60000";
-                    ctx.lineWidth = 2;
-                    ctx.fillRect(sp.x - 4, sp.y - 4, 8, 8);
-                    ctx.strokeRect(sp.x - 4, sp.y - 4, 8, 8);
+                    ctx.fillStyle = "#ffffff"; ctx.strokeStyle = "#e60000"; ctx.lineWidth = 2;
+                    ctx.fillRect(sp.x - 4, sp.y - 4, 8, 8); ctx.strokeRect(sp.x - 4, sp.y - 4, 8, 8);
                 });
             }
         });
@@ -344,18 +351,14 @@
     // --- Interaction Physics ---
     canvas.addEventListener('mousedown', e => {
         if(e.button === 2 || e.button === 1) { 
-            isPanning = true;
-            startX = e.clientX;
-            startY = e.clientY;
-            return;
+            isPanning = true; startX = e.clientX; startY = e.clientY; return;
         }
 
         let rect = canvas.getBoundingClientRect();
         let realPt = toReal(e.clientX - rect.left, e.clientY - rect.top);
 
         if(selectedSvg) {
-            let cx = selectedSvg.x + selectedSvg.w / 2;
-            let cy = selectedSvg.y + selectedSvg.h / 2;
+            let cx = selectedSvg.x + selectedSvg.w / 2; let cy = selectedSvg.y + selectedSvg.h / 2;
             let handles = [
                 {x: selectedSvg.x, y: selectedSvg.y + selectedSvg.h}, {x: selectedSvg.x + selectedSvg.w, y: selectedSvg.y + selectedSvg.h},
                 {x: selectedSvg.x + selectedSvg.w, y: selectedSvg.y}, {x: selectedSvg.x, y: selectedSvg.y},
@@ -397,10 +400,8 @@
 
     canvas.addEventListener('mousemove', e => {
         if(isPanning) {
-            viewPanX += (e.clientX - startX) / viewZoom;
-            viewPanY += (e.clientY - startY) / viewZoom;
-            startX = e.clientX; startY = e.clientY;
-            draw(); return;
+            viewPanX += (e.clientX - startX) / viewZoom; viewPanY += (e.clientY - startY) / viewZoom;
+            startX = e.clientX; startY = e.clientY; draw(); return;
         }
 
         if(!isDragging) return;
@@ -410,8 +411,7 @@
 
         if(dragType.startsWith('handle_')) {
             let idx = parseInt(dragType.split('_')[1]);
-            let svg = selectedSvg;
-            let cx = svg.x + svg.w / 2; let cy = svg.y + svg.h / 2;
+            let svg = selectedSvg; let cx = svg.x + svg.w / 2; let cy = svg.y + svg.h / 2;
             let urPt = rotatePoint(realPt.x, realPt.y, cx, cy, svg.rot);
             let newW = svg.w, newH = svg.h;
 
@@ -422,9 +422,7 @@
             } else if(idx === 5 || idx === 7) { newW = 2 * Math.abs(urPt.x - cx); }
 
             if(newW > 1 && newH > 1) {
-                svg.w = newW; svg.h = newH;
-                svg.x = cx - newW / 2; svg.y = cy - newH / 2;
-                updateUI();
+                svg.w = newW; svg.h = newH; svg.x = cx - newW / 2; svg.y = cy - newH / 2; updateUI();
             }
         } else if(dragType === 'svg') {
             selectedSvg.x = realPt.x - startMx; selectedSvg.y = realPt.y - startMy;
@@ -505,9 +503,7 @@
             document.getElementById('svgH').value = fromMM(selectedSvg.h).toFixed(3);
             document.getElementById('svgRot').value = selectedSvg.rot.toFixed(2);
         } else {
-            document.getElementById('svgW').value = "";
-            document.getElementById('svgH').value = "";
-            document.getElementById('svgRot').value = "";
+            document.getElementById('svgW').value = ""; document.getElementById('svgH').value = ""; document.getElementById('svgRot').value = "";
         }
     }
 
@@ -541,64 +537,123 @@
     function deleteSVG() {
         if(!selectedSvg) return;
         svgs = svgs.filter(s => s !== selectedSvg);
-        selectedSvg = null;
-        updateUI(); draw();
+        if(selectedSvg === lastTracedSvg) {
+            lastTracedSvg = null;
+            document.getElementById('imgControls').style.display = 'none';
+        }
+        selectedSvg = null; updateUI(); draw();
     }
 
-    // --- SVG File Parsing ---
-    function handleFileUpload(event) {
+    // --- Core Data Parsing & Tracing ---
+    function processSVGData(svgString, isTraced = false) {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(svgString, "image/svg+xml");
+        const parserSvg = document.getElementById('svgParser');
+        parserSvg.innerHTML = ""; 
+
+        let pathsElements = doc.querySelectorAll('path, line, polyline, polygon');
+        let parsedPaths = [];
+        let xMin = Infinity, xMax = -Infinity, yMin = Infinity, yMax = -Infinity;
+
+        pathsElements.forEach(el => {
+            let clone = el.cloneNode(true);
+            parserSvg.appendChild(clone);
+            
+            let length = clone.getTotalLength ? clone.getTotalLength() : 0;
+            if(length === 0) return;
+
+            let numSamples = Math.max(10, Math.ceil(length / 0.5));
+            let points = [];
+            for(let i=0; i<=numSamples; i++) {
+                let pt = clone.getPointAtLength(i/numSamples * length);
+                points.push({x: pt.x, y: pt.y});
+                xMin = Math.min(xMin, pt.x); xMax = Math.max(xMax, pt.x);
+                yMin = Math.min(yMin, pt.y); yMax = Math.max(yMax, pt.y);
+            }
+            parsedPaths.push({ points: points });
+        });
+
+        if(parsedPaths.length === 0) return null;
+
+        let origW = xMax - xMin; let origH = yMax - yMin;
+        let scale = Math.min((paper.w * 0.8) / origW, (paper.h * 0.8) / origH);
+
+        let newSvg = {
+            paths: parsedPaths, origW: origW, origH: origH, rawXmin: xMin, rawYmin: yMin,
+            x: 0, y: 0, w: origW * scale, h: origH * scale, rot: 0
+        };
+
+        svgs.push(newSvg);
+        
+        if(!isTraced) {
+            selectedSvg = newSvg;
+            centerSVG('both'); updateUI(); draw();
+        }
+        return newSvg;
+    }
+
+    function handleSvgUpload(event) {
         const file = event.target.files[0];
         if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) { processSVGData(e.target.result); event.target.value = ""; };
+        reader.readAsText(file);
+    }
 
+    function handleImageUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
         const reader = new FileReader();
         reader.onload = function(e) {
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(e.target.result, "image/svg+xml");
-            const parserSvg = document.getElementById('svgParser');
-            parserSvg.innerHTML = ""; 
-
-            let pathsElements = doc.querySelectorAll('path, line, polyline, polygon');
-            let parsedPaths = [];
-            let xMin = Infinity, xMax = -Infinity, yMin = Infinity, yMax = -Infinity;
-
-            pathsElements.forEach(el => {
-                let clone = el.cloneNode(true);
-                parserSvg.appendChild(clone);
-                
-                let length = clone.getTotalLength ? clone.getTotalLength() : 0;
-                if(length === 0) return;
-
-                let numSamples = Math.max(10, Math.ceil(length / 0.5));
-                let points = [];
-                for(let i=0; i<=numSamples; i++) {
-                    let pt = clone.getPointAtLength(i/numSamples * length);
-                    points.push({x: pt.x, y: pt.y});
-                    xMin = Math.min(xMin, pt.x); xMax = Math.max(xMax, pt.x);
-                    yMin = Math.min(yMin, pt.y); yMax = Math.max(yMax, pt.y);
-                }
-                parsedPaths.push({ points: points });
-            });
-
-            if(parsedPaths.length === 0) { alert("No valid paths found in SVG."); return; }
-
-            let origW = xMax - xMin; let origH = yMax - yMin;
-            let scale = Math.min((paper.w * 0.8) / origW, (paper.h * 0.8) / origH);
-
-            let newSvg = {
-                paths: parsedPaths, origW: origW, origH: origH, rawXmin: xMin, rawYmin: yMin,
-                x: 0, y: 0, w: origW * scale, h: origH * scale, rot: 0
-            };
-
-            svgs.push(newSvg); selectedSvg = newSvg;
-            centerSVG('both'); updateUI(); draw();
+            lastRasterImage = e.target.result;
+            document.getElementById('imgControls').style.display = 'block';
+            lastTracedSvg = null; 
+            runImageTracer();
             event.target.value = ""; 
         };
-        reader.readAsText(file);
+        reader.readAsDataURL(file);
+    }
+
+    function runImageTracer() {
+        if(!lastRasterImage) return;
+        
+        // Map Slider 1-100 to ImageTracer resolutions (5.0 rough -> 0.1 detailed)
+        let detail = parseInt(document.getElementById('traceDetail').value); 
+        let ltres = 5.0 - ((detail - 1) / 99) * 4.9; 
+        if(ltres < 0.1) ltres = 0.1;
+
+        let pathomit = parseInt(document.getElementById('traceNoise').value);
+
+        const options = { ltres: ltres, qtres: ltres, pathomit: pathomit, colorsampling: 0, numberofcolors: 2, mincolorratio: 0, colorquantcycles: 3 };
+        
+        ImageTracer.imageToSVG(lastRasterImage, function(svgString) {
+            let newSvg = processSVGData(svgString, true);
+            if(!newSvg) { alert("Tracing failed or produced no paths."); return; }
+
+            // If we are updating an existing trace, copy its size and position!
+            if(lastTracedSvg && svgs.includes(lastTracedSvg)) {
+                newSvg.x = lastTracedSvg.x;
+                newSvg.y = lastTracedSvg.y;
+                newSvg.w = lastTracedSvg.w;
+                newSvg.h = lastTracedSvg.h;
+                newSvg.rot = lastTracedSvg.rot;
+                // Delete the old trace from the canvas
+                svgs = svgs.filter(s => s !== lastTracedSvg);
+            } else {
+                // If it's brand new, drop it in the center
+                selectedSvg = newSvg;
+                centerSVG('both');
+            }
+            
+            lastTracedSvg = newSvg;
+            selectedSvg = newSvg;
+            updateUI(); draw();
+        }, options);
     }
 
     // --- G-Code Generation ---
     function generateGCode() {
-        if(svgs.length === 0) { alert("Please load an SVG first."); return; }
+        if(svgs.length === 0) { alert("Please load an object first."); return; }
         
         let zDraw = hw.zCal - hw.zPres;
         let zTravel = hw.zCal + 5.0;
@@ -619,10 +674,8 @@
         ];
 
         svgs.forEach(svg => {
-            let scaleX = svg.w / svg.origW;
-            let scaleY = svg.h / svg.origH;
-            let cx = svg.x + svg.w / 2;
-            let cy = svg.y + svg.h / 2;
+            let scaleX = svg.w / svg.origW; let scaleY = svg.h / svg.origH;
+            let cx = svg.x + svg.w / 2; let cy = svg.y + svg.h / 2;
 
             svg.paths.forEach(path => {
                 if(path.points.length === 0) return;
@@ -632,11 +685,9 @@
                     let inkY = svg.y + svg.h - ((pt.y - svg.rawYmin) * scaleY);
                     let rotPt = rotatePoint(inkX, inkY, cx, cy, -svg.rot);
 
-                    let nozX = rotPt.x - hw.offX;
-                    let nozY = rotPt.y - hw.offY;
+                    let nozX = rotPt.x - hw.offX; let nozY = rotPt.y - hw.offY;
 
-                    nozX = Math.max(0, Math.min(BED_W, nozX));
-                    nozY = Math.max(0, Math.min(BED_H, nozY));
+                    nozX = Math.max(0, Math.min(BED_W, nozX)); nozY = Math.max(0, Math.min(BED_H, nozY));
 
                     if(i === 0) {
                         gcode.push(`G1 X${nozX.toFixed(3)} Y${nozY.toFixed(3)} F${speedTravel}`);
@@ -657,11 +708,8 @@
 
         let blob = new Blob([gcode.join("\n")], { type: 'text/plain' });
         let url = URL.createObjectURL(blob);
-        let a = document.createElement('a');
-        a.href = url;
-        a.download = "plotter_web.gcode";
-        a.click();
-        URL.revokeObjectURL(url);
+        let a = document.createElement('a'); a.href = url; a.download = "plotter_web.gcode";
+        a.click(); URL.revokeObjectURL(url);
     }
 
     // Init
