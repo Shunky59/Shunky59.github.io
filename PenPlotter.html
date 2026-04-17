@@ -68,6 +68,7 @@
             justify-content: space-between;
             margin-bottom: 8px;
             align-items: center;
+            font-size: 14px;
         }
         input, select {
             width: 120px;
@@ -105,22 +106,40 @@
     <div class="control-group">
         <h3>Workspace Setup</h3>
         <div class="row">
-            <label>Size:</label>
+            <label>Units:</label>
+            <select id="unitSelect" onchange="changeUnits()">
+                <option value="mm">Millimeters (mm)</option>
+                <option value="cm">Centimeters (cm)</option>
+                <option value="in">Inches (in)</option>
+            </select>
+        </div>
+        <div class="row">
+            <label>Preset:</label>
             <select id="paperPreset" onchange="applyPaperPreset()">
                 <option value="letter">Letter (8.5x11 in)</option>
                 <option value="a4">A4 (210x297 mm)</option>
+                <option value="index">Index Card (3x5 in)</option>
+                <option value="custom">Custom</option>
             </select>
         </div>
-        <button onclick="toggleOrientation()" style="width: 100%">Toggle Portrait/Landscape</button>
+        <div class="row">
+            <label>Width (<span class="unit-label">mm</span>):</label>
+            <input type="number" id="paperW" onchange="applyCustomPaper()">
+        </div>
+        <div class="row">
+            <label>Height (<span class="unit-label">mm</span>):</label>
+            <input type="number" id="paperH" onchange="applyCustomPaper()">
+        </div>
+        <button onclick="toggleOrientation()" style="width: 100%; margin-top: 5px;">Toggle Portrait/Landscape</button>
     </div>
 
     <input type="file" id="fileInput" accept=".svg" style="display: none;" onchange="handleFileUpload(event)">
-    <button onclick="document.getElementById('fileInput').click()" style="width: 100%; margin-bottom: 15px; padding: 10px; background: #cccccc;">Load SVG File</button>
+    <button onclick="document.getElementById('fileInput').click()" style="width: 100%; margin-bottom: 15px; padding: 10px; background: #cccccc; font-weight: bold;">Load SVG File</button>
 
     <div class="control-group">
         <h3>Selected Object Tools</h3>
-        <div class="row"><label>Width (mm):</label><input type="number" id="svgW" onchange="applyTransform()"></div>
-        <div class="row"><label>Height (mm):</label><input type="number" id="svgH" onchange="applyTransform()"></div>
+        <div class="row"><label>Width (<span class="unit-label">mm</span>):</label><input type="number" id="svgW" onchange="applyTransform()"></div>
+        <div class="row"><label>Height (<span class="unit-label">mm</span>):</label><input type="number" id="svgH" onchange="applyTransform()"></div>
         <div class="row"><label>Rotation (°):</label><input type="number" id="svgRot" onchange="applyTransform()"></div>
         <div style="display: flex; gap: 5px; margin-bottom: 5px;">
             <button onclick="rotateSVG(-90)" style="flex: 1">-90°</button>
@@ -134,7 +153,7 @@
     </div>
 
     <div class="control-group">
-        <h3>Printer Hardware (mm)</h3>
+        <h3>Printer Hardware (Strictly mm)</h3>
         <div class="row"><label>Pen Offset X:</label><input type="number" id="offX" value="35.0"></div>
         <div class="row"><label>Pen Offset Y:</label><input type="number" id="offY" value="-10.0"></div>
         <div class="row"><label>Z Pause Height:</label><input type="number" id="zCal" value="10.0"></div>
@@ -158,12 +177,13 @@
     let viewPanX = 20.0;
     let viewPanY = 20.0;
     
+    let currentUnit = 'mm';
     let paper = { x: 0, y: 0, w: 215.9, h: 279.4, portrait: true };
     let svgs = [];
     let selectedSvg = null;
     
     let isDragging = false;
-    let dragType = null; // 'svg', 'paper', 'handle_0', etc.
+    let dragType = null;
     let isPanning = false;
     let startX, startY, startMx, startMy, startSvgW, startSvgH;
     
@@ -174,6 +194,26 @@
         draw();
     }
     window.addEventListener('resize', resizeCanvas);
+
+    // --- Unit Conversions ---
+    function toMM(val) {
+        if(currentUnit === 'in') return val * 25.4;
+        if(currentUnit === 'cm') return val * 10.0;
+        return val;
+    }
+
+    function fromMM(val) {
+        if(currentUnit === 'in') return val / 25.4;
+        if(currentUnit === 'cm') return val / 10.0;
+        return val;
+    }
+
+    function changeUnits() {
+        currentUnit = document.getElementById('unitSelect').value;
+        let labels = document.querySelectorAll('.unit-label');
+        labels.forEach(l => l.innerText = currentUnit === 'in' ? 'in' : currentUnit);
+        updateUI();
+    }
 
     // --- Math & Coordinates ---
     function toScreen(rx, ry) {
@@ -225,7 +265,7 @@
         ctx.strokeStyle = "#999"; ctx.strokeRect(p1.x, p1.y, p2.x - p1.x, p2.y - p1.y);
 
         // Draw SVGs
-        svgs.forEach((svg, idx) => {
+        svgs.forEach((svg) => {
             let cx = svg.x + svg.w / 2;
             let cy = svg.y + svg.h / 2;
 
@@ -258,7 +298,7 @@
             ctx.stroke();
             ctx.setLineDash([]);
 
-            // Draw Paths (Sampled Points)
+            // Draw Paths
             ctx.strokeStyle = isSelected ? "#00cc00" : "#0066cc";
             ctx.lineWidth = 2;
             let scaleX = svg.w / svg.origW;
@@ -294,7 +334,7 @@
 
     // --- Interaction Physics ---
     canvas.addEventListener('mousedown', e => {
-        if(e.button === 2 || e.button === 1) { // Right or Middle click
+        if(e.button === 2 || e.button === 1) { 
             isPanning = true;
             startX = e.clientX;
             startY = e.clientY;
@@ -306,7 +346,6 @@
         let mouseY = e.clientY - rect.top;
         let realPt = toReal(mouseX, mouseY);
 
-        // Check Handles
         if(selectedSvg) {
             let cx = selectedSvg.x + selectedSvg.w / 2;
             let cy = selectedSvg.y + selectedSvg.h / 2;
@@ -337,7 +376,6 @@
             }
         }
 
-        // Check SVG Body
         for(let i = svgs.length - 1; i >= 0; i--) {
             let svg = svgs[i];
             let cx = svg.x + svg.w / 2;
@@ -357,7 +395,6 @@
             }
         }
 
-        // Check Paper
         if(realPt.x >= paper.x && realPt.x <= paper.x + paper.w &&
            realPt.y >= paper.y && realPt.y <= paper.y + paper.h) {
             selectedSvg = null;
@@ -403,15 +440,15 @@
 
             let newW = svg.w, newH = svg.h;
 
-            if(idx <= 3) { // Corners - Locked Aspect Ratio (Hypotenuse)
+            if(idx <= 3) { 
                 let distStart = Math.hypot(startSvgW/2, startSvgH/2);
                 let distCurr = Math.hypot(urPt.x - cx, urPt.y - cy);
                 let scale = distCurr / distStart;
                 newW = startSvgW * scale;
                 newH = startSvgH * scale;
-            } else if(idx === 4 || idx === 6) { // Top/Bot - Height Only
+            } else if(idx === 4 || idx === 6) { 
                 newH = 2 * Math.abs(urPt.y - cy);
-            } else if(idx === 5 || idx === 7) { // Left/Right - Width Only
+            } else if(idx === 5 || idx === 7) { 
                 newW = 2 * Math.abs(urPt.x - cx);
             }
 
@@ -442,21 +479,50 @@
     function applyPaperPreset() {
         let val = document.getElementById('paperPreset').value;
         if(val === 'letter') { paper.w = 215.9; paper.h = 279.4; }
-        if(val === 'a4') { paper.w = 210.0; paper.h = 297.0; }
-        if(!paper.portrait) { let t = paper.w; paper.w = paper.h; paper.h = t; }
+        else if(val === 'a4') { paper.w = 210.0; paper.h = 297.0; }
+        else if(val === 'index') { paper.w = 76.2; paper.h = 127.0; }
+        
+        if(val !== 'custom') {
+            if(!paper.portrait) { let t = paper.w; paper.w = paper.h; paper.h = t; }
+            updateUI();
+            draw();
+        }
+    }
+
+    function applyCustomPaper() {
+        document.getElementById('paperPreset').value = 'custom';
+        let customW = parseFloat(document.getElementById('paperW').value);
+        let customH = parseFloat(document.getElementById('paperH').value);
+        
+        if(!isNaN(customW)) paper.w = toMM(customW);
+        if(!isNaN(customH)) paper.h = toMM(customH);
         draw();
     }
     
     function toggleOrientation() {
         paper.portrait = !paper.portrait;
         let t = paper.w; paper.w = paper.h; paper.h = t;
+        
+        // Only flip dimensions if it is a standard preset to avoid messing up custom entries
+        if(document.getElementById('paperPreset').value !== 'custom') {
+             updateUI();
+        } else {
+             // For custom, swap the inputs
+             let pw = document.getElementById('paperW').value;
+             let ph = document.getElementById('paperH').value;
+             document.getElementById('paperW').value = ph;
+             document.getElementById('paperH').value = pw;
+        }
         draw();
     }
 
     function updateUI() {
+        document.getElementById('paperW').value = fromMM(paper.w).toFixed(2);
+        document.getElementById('paperH').value = fromMM(paper.h).toFixed(2);
+
         if(selectedSvg) {
-            document.getElementById('svgW').value = selectedSvg.w.toFixed(2);
-            document.getElementById('svgH').value = selectedSvg.h.toFixed(2);
+            document.getElementById('svgW').value = fromMM(selectedSvg.w).toFixed(2);
+            document.getElementById('svgH').value = fromMM(selectedSvg.h).toFixed(2);
             document.getElementById('svgRot').value = selectedSvg.rot.toFixed(2);
         } else {
             document.getElementById('svgW').value = "";
@@ -467,8 +533,12 @@
 
     function applyTransform() {
         if(!selectedSvg) return;
-        selectedSvg.w = parseFloat(document.getElementById('svgW').value) || selectedSvg.w;
-        selectedSvg.h = parseFloat(document.getElementById('svgH').value) || selectedSvg.h;
+        let nw = parseFloat(document.getElementById('svgW').value);
+        let nh = parseFloat(document.getElementById('svgH').value);
+        
+        if(!isNaN(nw)) selectedSvg.w = toMM(nw);
+        if(!isNaN(nh)) selectedSvg.h = toMM(nh);
+        
         selectedSvg.rot = parseFloat(document.getElementById('svgRot').value) || selectedSvg.rot;
         draw();
     }
@@ -493,7 +563,7 @@
         updateUI(); draw();
     }
 
-    // --- SVG File Parsing (The Javascript Way) ---
+    // --- SVG File Parsing ---
     function handleFileUpload(event) {
         const file = event.target.files[0];
         if (!file) return;
@@ -505,15 +575,12 @@
             const parserSvg = document.getElementById('svgParser');
             parserSvg.innerHTML = ""; 
 
-            // Extract all paths, lines, polylines, rects, circles and convert them to paths roughly
-            // For simplicity in this web port, we extract <path> elements and sample points along them
             let pathsElements = doc.querySelectorAll('path, line, polyline, polygon');
             let parsedPaths = [];
             
             let xMin = Infinity, xMax = -Infinity, yMin = Infinity, yMax = -Infinity;
 
             pathsElements.forEach(el => {
-                // To measure accurately, we inject it into the DOM
                 let clone = el.cloneNode(true);
                 parserSvg.appendChild(clone);
                 
@@ -558,7 +625,7 @@
             centerSVG('both');
             updateUI();
             draw();
-            event.target.value = ""; // reset input
+            event.target.value = ""; 
         };
         reader.readAsText(file);
     }
@@ -607,7 +674,6 @@
                     let nozX = rotPt.x - offX;
                     let nozY = rotPt.y - offY;
 
-                    // Clamp to bed
                     nozX = Math.max(0, Math.min(BED_W, nozX));
                     nozY = Math.max(0, Math.min(BED_H, nozY));
 
@@ -628,7 +694,6 @@
         gcode.push(`G1 X0 Y210 F${speedTravel}`);
         gcode.push("M84 ; Disable motors");
 
-        // Download Blob
         let blob = new Blob([gcode.join("\n")], { type: 'text/plain' });
         let url = URL.createObjectURL(blob);
         let a = document.createElement('a');
@@ -639,6 +704,7 @@
     }
 
     // Init
+    updateUI();
     resizeCanvas();
 </script>
 </body>
