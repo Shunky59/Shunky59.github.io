@@ -743,10 +743,19 @@
             if(!newSvg) { alert("Tracing failed or produced no paths."); return; }
 
             if(lastTracedSvg && svgs.includes(lastTracedSvg)) {
-                newSvg.x = lastTracedSvg.x;
-                newSvg.y = lastTracedSvg.y;
-                newSvg.w = lastTracedSvg.w;
-                newSvg.h = lastTracedSvg.h;
+                
+                // Keep the exact same physical scale (mm per trace-pixel) so it doesn't warp or jump in size
+                let oldMmPerPixel = lastTracedSvg.w / lastTracedSvg.origW;
+                
+                newSvg.w = newSvg.origW * oldMmPerPixel;
+                newSvg.h = newSvg.origH * oldMmPerPixel;
+                
+                // Center it exactly where the old one was
+                let oldCx = lastTracedSvg.x + lastTracedSvg.w / 2;
+                let oldCy = lastTracedSvg.y + lastTracedSvg.h / 2;
+                newSvg.x = oldCx - newSvg.w / 2;
+                newSvg.y = oldCy - newSvg.h / 2;
+                
                 newSvg.rot = lastTracedSvg.rot;
                 svgs = svgs.filter(s => s !== lastTracedSvg);
             } else {
