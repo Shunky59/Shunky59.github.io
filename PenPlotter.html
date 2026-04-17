@@ -73,6 +73,7 @@
         input, select {
             width: 120px;
             padding: 4px;
+            box-sizing: border-box;
         }
         button {
             background-color: #e0e0e0;
@@ -91,7 +92,7 @@
 
 <div id="left-panel">
     <div id="toolbar">
-        <strong>Virtual Workspace</strong>
+        <strong>Prusa MK4s Pen Plotter</strong>
         <div>
             <button onclick="resetView()">Reset View</button>
             <button onclick="zoomCanvas(0.8)">Zoom Out (-)</button>
@@ -124,11 +125,11 @@
         </div>
         <div class="row">
             <label>Width (<span class="unit-label">mm</span>):</label>
-            <input type="number" id="paperW" onchange="applyCustomPaper()">
+            <input type="text" id="paperW" onchange="applyCustomPaper()" placeholder="e.g. 8 1/2">
         </div>
         <div class="row">
             <label>Height (<span class="unit-label">mm</span>):</label>
-            <input type="number" id="paperH" onchange="applyCustomPaper()">
+            <input type="text" id="paperH" onchange="applyCustomPaper()" placeholder="e.g. 11">
         </div>
         <button onclick="toggleOrientation()" style="width: 100%; margin-top: 5px;">Toggle Portrait/Landscape</button>
     </div>
@@ -138,9 +139,9 @@
 
     <div class="control-group">
         <h3>Selected Object Tools</h3>
-        <div class="row"><label>Width (<span class="unit-label">mm</span>):</label><input type="number" id="svgW" onchange="applyTransform()"></div>
-        <div class="row"><label>Height (<span class="unit-label">mm</span>):</label><input type="number" id="svgH" onchange="applyTransform()"></div>
-        <div class="row"><label>Rotation (°):</label><input type="number" id="svgRot" onchange="applyTransform()"></div>
+        <div class="row"><label>Width (<span class="unit-label">mm</span>):</label><input type="text" id="svgW" onchange="applyTransform()"></div>
+        <div class="row"><label>Height (<span class="unit-label">mm</span>):</label><input type="text" id="svgH" onchange="applyTransform()"></div>
+        <div class="row"><label>Rotation (°):</label><input type="text" id="svgRot" onchange="applyTransform()"></div>
         <div style="display: flex; gap: 5px; margin-bottom: 5px;">
             <button onclick="rotateSVG(-90)" style="flex: 1">-90°</button>
             <button onclick="rotateSVG(90)" style="flex: 1">+90°</button>
@@ -153,11 +154,11 @@
     </div>
 
     <div class="control-group">
-        <h3>Printer Hardware (Strictly mm)</h3>
-        <div class="row"><label>Pen Offset X:</label><input type="number" id="offX" value="35.0"></div>
-        <div class="row"><label>Pen Offset Y:</label><input type="number" id="offY" value="-10.0"></div>
-        <div class="row"><label>Z Pause Height:</label><input type="number" id="zCal" value="10.0"></div>
-        <div class="row"><label>Z Pen Pressure:</label><input type="number" id="zPres" value="1.0"></div>
+        <h3>Printer Hardware</h3>
+        <div class="row"><label>Pen Offset X (<span class="unit-label">mm</span>):</label><input type="text" id="offX" onchange="applyHardware()"></div>
+        <div class="row"><label>Pen Offset Y (<span class="unit-label">mm</span>):</label><input type="text" id="offY" onchange="applyHardware()"></div>
+        <div class="row"><label>Z Pause Hgt (<span class="unit-label">mm</span>):</label><input type="text" id="zCal" onchange="applyHardware()"></div>
+        <div class="row"><label>Z Pressure (<span class="unit-label">mm</span>):</label><input type="text" id="zPres" onchange="applyHardware()"></div>
     </div>
 
     <button class="btn-primary" onclick="generateGCode()">Generate G-Code</button>
@@ -179,6 +180,7 @@
     
     let currentUnit = 'mm';
     let paper = { x: 0, y: 0, w: 215.9, h: 279.4, portrait: true };
+    let hw = { offX: 35.0, offY: -10.0, zCal: 10.0, zPres: 1.0 }; // Core hardware always tracks mm internally
     let svgs = [];
     let selectedSvg = null;
     
@@ -194,6 +196,23 @@
         draw();
     }
     window.addEventListener('resize', resizeCanvas);
+
+    // --- Math & Fraction Parsing ---
+    function parseFraction(str) {
+        if (!str) return NaN;
+        str = str.toString().trim();
+        let parts = str.split(' ');
+        if (parts.length === 2 && parts[1].includes('/')) {
+            let whole = parseFloat(parts[0]);
+            let frac = parts[1].split('/');
+            let val = parseFloat(frac[0]) / parseFloat(frac[1]);
+            return whole < 0 ? whole - val : whole + val;
+        } else if (str.includes('/')) {
+            let frac = str.split('/');
+            return parseFloat(frac[0]) / parseFloat(frac[1]);
+        }
+        return parseFloat(str);
+    }
 
     // --- Unit Conversions ---
     function toMM(val) {
@@ -215,7 +234,6 @@
         updateUI();
     }
 
-    // --- Math & Coordinates ---
     function toScreen(rx, ry) {
         return {
             x: (rx + viewPanX) * viewZoom,
@@ -270,20 +288,13 @@
             let cy = svg.y + svg.h / 2;
 
             let handles = [
-                {x: svg.x, y: svg.y + svg.h},             // 0: BL
-                {x: svg.x + svg.w, y: svg.y + svg.h},     // 1: BR
-                {x: svg.x + svg.w, y: svg.y},             // 2: TR
-                {x: svg.x, y: svg.y},                     // 3: TL
-                {x: svg.x + svg.w / 2, y: svg.y + svg.h}, // 4: B
-                {x: svg.x + svg.w, y: svg.y + svg.h / 2}, // 5: R
-                {x: svg.x + svg.w / 2, y: svg.y},         // 6: T
-                {x: svg.x, y: svg.y + svg.h / 2}          // 7: L
+                {x: svg.x, y: svg.y + svg.h}, {x: svg.x + svg.w, y: svg.y + svg.h}, {x: svg.x + svg.w, y: svg.y}, {x: svg.x, y: svg.y},
+                {x: svg.x + svg.w / 2, y: svg.y + svg.h}, {x: svg.x + svg.w, y: svg.y + svg.h / 2}, {x: svg.x + svg.w / 2, y: svg.y}, {x: svg.x, y: svg.y + svg.h / 2}
             ];
 
             let rotatedHandles = handles.map(h => rotatePoint(h.x, h.y, cx, cy, -svg.rot));
             let isSelected = (svg === selectedSvg);
 
-            // Bounding Box
             ctx.strokeStyle = isSelected ? "#00cc00" : "#0066cc";
             ctx.lineWidth = 1;
             ctx.setLineDash([4, 4]);
@@ -298,7 +309,6 @@
             ctx.stroke();
             ctx.setLineDash([]);
 
-            // Draw Paths
             ctx.strokeStyle = isSelected ? "#00cc00" : "#0066cc";
             ctx.lineWidth = 2;
             let scaleX = svg.w / svg.origW;
@@ -318,7 +328,6 @@
                 ctx.stroke();
             });
 
-            // Draw 8 Red Handles
             if(isSelected) {
                 rotatedHandles.forEach((rh) => {
                     let sp = toScreen(rh.x, rh.y);
@@ -342,129 +351,85 @@
         }
 
         let rect = canvas.getBoundingClientRect();
-        let mouseX = e.clientX - rect.left;
-        let mouseY = e.clientY - rect.top;
-        let realPt = toReal(mouseX, mouseY);
+        let realPt = toReal(e.clientX - rect.left, e.clientY - rect.top);
 
         if(selectedSvg) {
             let cx = selectedSvg.x + selectedSvg.w / 2;
             let cy = selectedSvg.y + selectedSvg.h / 2;
-            
             let handles = [
-                {x: selectedSvg.x, y: selectedSvg.y + selectedSvg.h},
-                {x: selectedSvg.x + selectedSvg.w, y: selectedSvg.y + selectedSvg.h},
-                {x: selectedSvg.x + selectedSvg.w, y: selectedSvg.y},
-                {x: selectedSvg.x, y: selectedSvg.y},
-                {x: selectedSvg.x + selectedSvg.w / 2, y: selectedSvg.y + selectedSvg.h},
-                {x: selectedSvg.x + selectedSvg.w, y: selectedSvg.y + selectedSvg.h / 2},
-                {x: selectedSvg.x + selectedSvg.w / 2, y: selectedSvg.y},
-                {x: selectedSvg.x, y: selectedSvg.y + selectedSvg.h / 2}
+                {x: selectedSvg.x, y: selectedSvg.y + selectedSvg.h}, {x: selectedSvg.x + selectedSvg.w, y: selectedSvg.y + selectedSvg.h},
+                {x: selectedSvg.x + selectedSvg.w, y: selectedSvg.y}, {x: selectedSvg.x, y: selectedSvg.y},
+                {x: selectedSvg.x + selectedSvg.w / 2, y: selectedSvg.y + selectedSvg.h}, {x: selectedSvg.x + selectedSvg.w, y: selectedSvg.y + selectedSvg.h / 2},
+                {x: selectedSvg.x + selectedSvg.w / 2, y: selectedSvg.y}, {x: selectedSvg.x, y: selectedSvg.y + selectedSvg.h / 2}
             ];
 
             for(let i=0; i<8; i++) {
                 let rh = rotatePoint(handles[i].x, handles[i].y, cx, cy, -selectedSvg.rot);
                 let sp = toScreen(rh.x, rh.y);
-                if(Math.abs(mouseX - sp.x) <= 6 && Math.abs(mouseY - sp.y) <= 6) {
-                    isDragging = true;
-                    dragType = 'handle_' + i;
-                    startSvgW = selectedSvg.w;
-                    startSvgH = selectedSvg.h;
-                    startMx = realPt.x;
-                    startMy = realPt.y;
-                    return;
+                if(Math.abs((e.clientX - rect.left) - sp.x) <= 6 && Math.abs((e.clientY - rect.top) - sp.y) <= 6) {
+                    isDragging = true; dragType = 'handle_' + i;
+                    startSvgW = selectedSvg.w; startSvgH = selectedSvg.h;
+                    startMx = realPt.x; startMy = realPt.y; return;
                 }
             }
         }
 
         for(let i = svgs.length - 1; i >= 0; i--) {
             let svg = svgs[i];
-            let cx = svg.x + svg.w / 2;
-            let cy = svg.y + svg.h / 2;
+            let cx = svg.x + svg.w / 2; let cy = svg.y + svg.h / 2;
             let unRotPt = rotatePoint(realPt.x, realPt.y, cx, cy, svg.rot);
             
-            if(unRotPt.x >= svg.x && unRotPt.x <= svg.x + svg.w &&
-               unRotPt.y >= svg.y && unRotPt.y <= svg.y + svg.h) {
-                selectedSvg = svg;
-                isDragging = true;
-                dragType = 'svg';
-                startMx = realPt.x - svg.x;
-                startMy = realPt.y - svg.y;
-                updateUI();
-                draw();
-                return;
+            if(unRotPt.x >= svg.x && unRotPt.x <= svg.x + svg.w && unRotPt.y >= svg.y && unRotPt.y <= svg.y + svg.h) {
+                selectedSvg = svg; isDragging = true; dragType = 'svg';
+                startMx = realPt.x - svg.x; startMy = realPt.y - svg.y;
+                updateUI(); draw(); return;
             }
         }
 
-        if(realPt.x >= paper.x && realPt.x <= paper.x + paper.w &&
-           realPt.y >= paper.y && realPt.y <= paper.y + paper.h) {
-            selectedSvg = null;
-            isDragging = true;
-            dragType = 'paper';
-            startMx = realPt.x - paper.x;
-            startMy = realPt.y - paper.y;
-            updateUI();
-            draw();
-            return;
+        if(realPt.x >= paper.x && realPt.x <= paper.x + paper.w && realPt.y >= paper.y && realPt.y <= paper.y + paper.h) {
+            selectedSvg = null; isDragging = true; dragType = 'paper';
+            startMx = realPt.x - paper.x; startMy = realPt.y - paper.y;
+            updateUI(); draw(); return;
         }
 
-        selectedSvg = null;
-        updateUI();
-        draw();
+        selectedSvg = null; updateUI(); draw();
     });
 
     canvas.addEventListener('mousemove', e => {
         if(isPanning) {
-            let dx = (e.clientX - startX) / viewZoom;
-            let dy = (e.clientY - startY) / viewZoom;
-            viewPanX += dx;
-            viewPanY += dy;
-            startX = e.clientX;
-            startY = e.clientY;
-            draw();
-            return;
+            viewPanX += (e.clientX - startX) / viewZoom;
+            viewPanY += (e.clientY - startY) / viewZoom;
+            startX = e.clientX; startY = e.clientY;
+            draw(); return;
         }
 
         if(!isDragging) return;
 
         let rect = canvas.getBoundingClientRect();
-        let mouseX = e.clientX - rect.left;
-        let mouseY = e.clientY - rect.top;
-        let realPt = toReal(mouseX, mouseY);
+        let realPt = toReal(e.clientX - rect.left, e.clientY - rect.top);
 
         if(dragType.startsWith('handle_')) {
             let idx = parseInt(dragType.split('_')[1]);
             let svg = selectedSvg;
-            let cx = svg.x + svg.w / 2;
-            let cy = svg.y + svg.h / 2;
+            let cx = svg.x + svg.w / 2; let cy = svg.y + svg.h / 2;
             let urPt = rotatePoint(realPt.x, realPt.y, cx, cy, svg.rot);
-
             let newW = svg.w, newH = svg.h;
 
             if(idx <= 3) { 
-                let distStart = Math.hypot(startSvgW/2, startSvgH/2);
-                let distCurr = Math.hypot(urPt.x - cx, urPt.y - cy);
-                let scale = distCurr / distStart;
-                newW = startSvgW * scale;
-                newH = startSvgH * scale;
-            } else if(idx === 4 || idx === 6) { 
-                newH = 2 * Math.abs(urPt.y - cy);
-            } else if(idx === 5 || idx === 7) { 
-                newW = 2 * Math.abs(urPt.x - cx);
-            }
+                let scale = Math.hypot(urPt.x - cx, urPt.y - cy) / Math.hypot(startSvgW/2, startSvgH/2);
+                newW = startSvgW * scale; newH = startSvgH * scale;
+            } else if(idx === 4 || idx === 6) { newH = 2 * Math.abs(urPt.y - cy);
+            } else if(idx === 5 || idx === 7) { newW = 2 * Math.abs(urPt.x - cx); }
 
             if(newW > 1 && newH > 1) {
-                svg.w = newW;
-                svg.h = newH;
-                svg.x = cx - newW / 2;
-                svg.y = cy - newH / 2;
+                svg.w = newW; svg.h = newH;
+                svg.x = cx - newW / 2; svg.y = cy - newH / 2;
                 updateUI();
             }
         } else if(dragType === 'svg') {
-            selectedSvg.x = realPt.x - startMx;
-            selectedSvg.y = realPt.y - startMy;
+            selectedSvg.x = realPt.x - startMx; selectedSvg.y = realPt.y - startMy;
         } else if(dragType === 'paper') {
-            paper.x = realPt.x - startMx;
-            paper.y = realPt.y - startMy;
+            paper.x = realPt.x - startMx; paper.y = realPt.y - startMy;
         }
         draw();
     });
@@ -484,30 +449,27 @@
         
         if(val !== 'custom') {
             if(!paper.portrait) { let t = paper.w; paper.w = paper.h; paper.h = t; }
-            updateUI();
-            draw();
+            updateUI(); draw();
         }
     }
 
     function applyCustomPaper() {
         document.getElementById('paperPreset').value = 'custom';
-        let customW = parseFloat(document.getElementById('paperW').value);
-        let customH = parseFloat(document.getElementById('paperH').value);
+        let customW = parseFraction(document.getElementById('paperW').value);
+        let customH = parseFraction(document.getElementById('paperH').value);
         
         if(!isNaN(customW)) paper.w = toMM(customW);
         if(!isNaN(customH)) paper.h = toMM(customH);
-        draw();
+        updateUI(); draw();
     }
     
     function toggleOrientation() {
         paper.portrait = !paper.portrait;
         let t = paper.w; paper.w = paper.h; paper.h = t;
         
-        // Only flip dimensions if it is a standard preset to avoid messing up custom entries
         if(document.getElementById('paperPreset').value !== 'custom') {
              updateUI();
         } else {
-             // For custom, swap the inputs
              let pw = document.getElementById('paperW').value;
              let ph = document.getElementById('paperH').value;
              document.getElementById('paperW').value = ph;
@@ -516,13 +478,31 @@
         draw();
     }
 
+    function applyHardware() {
+        let ox = parseFraction(document.getElementById('offX').value);
+        let oy = parseFraction(document.getElementById('offY').value);
+        let zc = parseFraction(document.getElementById('zCal').value);
+        let zp = parseFraction(document.getElementById('zPres').value);
+        
+        if(!isNaN(ox)) hw.offX = toMM(ox);
+        if(!isNaN(oy)) hw.offY = toMM(oy);
+        if(!isNaN(zc)) hw.zCal = toMM(zc);
+        if(!isNaN(zp)) hw.zPres = toMM(zp);
+        updateUI();
+    }
+
     function updateUI() {
-        document.getElementById('paperW').value = fromMM(paper.w).toFixed(2);
-        document.getElementById('paperH').value = fromMM(paper.h).toFixed(2);
+        document.getElementById('paperW').value = fromMM(paper.w).toFixed(3);
+        document.getElementById('paperH').value = fromMM(paper.h).toFixed(3);
+        
+        document.getElementById('offX').value = fromMM(hw.offX).toFixed(3);
+        document.getElementById('offY').value = fromMM(hw.offY).toFixed(3);
+        document.getElementById('zCal').value = fromMM(hw.zCal).toFixed(3);
+        document.getElementById('zPres').value = fromMM(hw.zPres).toFixed(3);
 
         if(selectedSvg) {
-            document.getElementById('svgW').value = fromMM(selectedSvg.w).toFixed(2);
-            document.getElementById('svgH').value = fromMM(selectedSvg.h).toFixed(2);
+            document.getElementById('svgW').value = fromMM(selectedSvg.w).toFixed(3);
+            document.getElementById('svgH').value = fromMM(selectedSvg.h).toFixed(3);
             document.getElementById('svgRot').value = selectedSvg.rot.toFixed(2);
         } else {
             document.getElementById('svgW').value = "";
@@ -533,14 +513,16 @@
 
     function applyTransform() {
         if(!selectedSvg) return;
-        let nw = parseFloat(document.getElementById('svgW').value);
-        let nh = parseFloat(document.getElementById('svgH').value);
+        let nw = parseFraction(document.getElementById('svgW').value);
+        let nh = parseFraction(document.getElementById('svgH').value);
         
         if(!isNaN(nw)) selectedSvg.w = toMM(nw);
         if(!isNaN(nh)) selectedSvg.h = toMM(nh);
         
-        selectedSvg.rot = parseFloat(document.getElementById('svgRot').value) || selectedSvg.rot;
-        draw();
+        let rot = parseFraction(document.getElementById('svgRot').value);
+        if(!isNaN(rot)) selectedSvg.rot = rot;
+        
+        updateUI(); draw();
     }
 
     function rotateSVG(deg) {
@@ -577,7 +559,6 @@
 
             let pathsElements = doc.querySelectorAll('path, line, polyline, polygon');
             let parsedPaths = [];
-            
             let xMin = Infinity, xMax = -Infinity, yMin = Infinity, yMax = -Infinity;
 
             pathsElements.forEach(el => {
@@ -598,33 +579,18 @@
                 parsedPaths.push({ points: points });
             });
 
-            if(parsedPaths.length === 0) {
-                alert("No valid paths found in SVG.");
-                return;
-            }
+            if(parsedPaths.length === 0) { alert("No valid paths found in SVG."); return; }
 
-            let origW = xMax - xMin;
-            let origH = yMax - yMin;
-
+            let origW = xMax - xMin; let origH = yMax - yMin;
             let scale = Math.min((paper.w * 0.8) / origW, (paper.h * 0.8) / origH);
 
             let newSvg = {
-                paths: parsedPaths,
-                origW: origW,
-                origH: origH,
-                rawXmin: xMin,
-                rawYmin: yMin,
-                x: 0, y: 0,
-                w: origW * scale,
-                h: origH * scale,
-                rot: 0
+                paths: parsedPaths, origW: origW, origH: origH, rawXmin: xMin, rawYmin: yMin,
+                x: 0, y: 0, w: origW * scale, h: origH * scale, rot: 0
             };
 
-            svgs.push(newSvg);
-            selectedSvg = newSvg;
-            centerSVG('both');
-            updateUI();
-            draw();
+            svgs.push(newSvg); selectedSvg = newSvg;
+            centerSVG('both'); updateUI(); draw();
             event.target.value = ""; 
         };
         reader.readAsText(file);
@@ -633,14 +599,9 @@
     // --- G-Code Generation ---
     function generateGCode() {
         if(svgs.length === 0) { alert("Please load an SVG first."); return; }
-
-        let offX = parseFloat(document.getElementById('offX').value) || 0;
-        let offY = parseFloat(document.getElementById('offY').value) || 0;
-        let zCal = parseFloat(document.getElementById('zCal').value) || 10;
-        let zPres = parseFloat(document.getElementById('zPres').value) || 1;
         
-        let zDraw = zCal - zPres;
-        let zTravel = zCal + 5.0;
+        let zDraw = hw.zCal - hw.zPres;
+        let zTravel = hw.zCal + 5.0;
         let speedTravel = 6000;
         let speedDraw = 3000;
 
@@ -651,7 +612,7 @@
             "M104 S0 ; Extruder off",
             "M140 S0 ; Bed off",
             "G28 ; Home axes",
-            `G1 Z${zCal.toFixed(2)} F${speedTravel}`,
+            `G1 Z${hw.zCal.toFixed(2)} F${speedTravel}`,
             "M117 Insert Pen & Touch Paper",
             "M0 Insert pen, gently touch paper, tighten mount. Click knob.",
             `G1 Z${zTravel.toFixed(2)} F${speedTravel}`
@@ -671,8 +632,8 @@
                     let inkY = svg.y + svg.h - ((pt.y - svg.rawYmin) * scaleY);
                     let rotPt = rotatePoint(inkX, inkY, cx, cy, -svg.rot);
 
-                    let nozX = rotPt.x - offX;
-                    let nozY = rotPt.y - offY;
+                    let nozX = rotPt.x - hw.offX;
+                    let nozY = rotPt.y - hw.offY;
 
                     nozX = Math.max(0, Math.min(BED_W, nozX));
                     nozY = Math.max(0, Math.min(BED_H, nozY));
