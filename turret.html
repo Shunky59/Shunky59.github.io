@@ -181,14 +181,6 @@
             margin-bottom: 2rem;
         }
 
-        /* --- FOOTER --- */
-        #contact { text-align: center; background-color: var(--primary-color); color: white; padding: 4rem 2rem; }
-        .section-title { font-size: 2.2rem; margin-bottom: 2rem; position: relative; display: inline-block;}
-        #contact .section-title::after { content: ""; display: block; width: 60px; height: 4px; background: white; margin: 10px auto 0; border-radius: 2px;}
-        .contact-links { display: flex; justify-content: center; gap: 2rem; flex-wrap: wrap; }
-        .contact-btn { border: 2px solid rgba(255,255,255,0.3); padding: 12px 25px; border-radius: 30px; transition: all 0.3s; background: rgba(255,255,255,0.05);}
-        .contact-btn:hover { background: white; color: var(--primary-color); border-color: white; transform: translateY(-3px);}
-
         /* --- MOBILE RESPONSIVENESS --- */
         @media (max-width: 768px) {
             .image-grid { grid-template-columns: 1fr; }
@@ -285,16 +277,9 @@
 
     </div>
 
-    <section id="contact">
-        <h2 class="section-title">Get In Touch</h2>
-        <div class="contact-links">
-            <a href="mailto:dshunk9@gmail.com" class="contact-btn">Email Me</a>
-            <a href="https://www.linkedin.com/in/david-shunk" target="_blank" class="contact-btn">LinkedIn</a>
-            <a href="https://github.com/Shunky59" target="_blank" class="contact-btn">GitHub</a>
-        </div>
-        <br><br>
-        <p style="font-size: 0.8rem; opacity: 0.7;">&copy; 2026 David Shunk.</p>
-    </section>
+    <div style="text-align: center; padding: 2rem; background: var(--primary-color); color: white;">
+        <p style="margin:0; opacity: 0.8;">&copy; 2026 David Shunk</p>
+    </div>
 
 </body>
 </html>
