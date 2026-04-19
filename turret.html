@@ -322,16 +322,16 @@
 
             <div class="image-grid">
                 <div>
-                    <img src="TurretSideView.JPG" alt="Side view of the RC Nerf Turret" class="project-image">
+                    <img src="images/TurretSideView.JPG" alt="Side view of the RC Nerf Turret" class="project-image">
                     <div class="image-caption">Side Profile: Blaster mounted on the panning/tilting mechanism.</div>
                 </div>
                 <div>
-                    <img src="TurretFrontView.JPG" alt="Front view of the RC Nerf Turret" class="project-image">
+                    <img src="images/TurretFrontView.JPG" alt="Front view of the RC Nerf Turret" class="project-image">
                     <div class="image-caption">Front View: GoBuilda YellowJacket motors actuating the frame.</div>
                 </div>
             </div>
 
-            <img src="Nerf Turret Instructions.jpg" alt="Nerf Turret Startup Instructions and Controls" class="full-width-img" style="margin-top: 2rem;">
+            <img src="images/Nerf Turret Instructions.jpg" alt="Nerf Turret Startup Instructions and Controls" class="full-width-img" style="margin-top: 2rem;">
             <div class="image-caption" style="margin-bottom: 1rem;">Startup sequence and Xbox Controller mapping for intuitive operation.</div>
             
             <p>Troubleshooting Note: If the Xbox controller unexpectedly disconnects during operation, simply hold the pair button on the front of the controller to re-establish the Bluetooth connection with the ESP32. Additionally, if any specific component stops responding, the GitHub repository contains individual test programs to help isolate and debug issues with the motors, flywheels, or communication lines.</p>
@@ -342,7 +342,7 @@
             <p>The system utilizes a dual-microcontroller setup to separate wireless communication from strict motor control. An ESP32 is dedicated to establishing and maintaining a Bluetooth connection with a wireless Xbox Controller. Once inputs are received and processed, the ESP32 transmits commands via a TX/RX Serial connection to an Arduino Mega.</p>
             <p>The Arduino Mega serves as the master hardware controller, interpreting the serial commands to physically drive the MDD10A and L298N motor drivers, ensuring that motor actuation doesn't interrupt the wireless communication loop.</p>
             
-            <img src="Nerf Gun Turret Wiring Diagram.jpg" alt="Wiring diagram for the dual microcontroller system" class="full-width-img">
+            <img src="images/Nerf Gun Turret Wiring Diagram.jpg" alt="Wiring diagram for the dual microcontroller system" class="full-width-img">
             <div class="image-caption" style="margin-bottom: 2rem;">Complete wiring schematic detailing the ESP32, Arduino Mega, motor drivers, and AC/DC power routing.</div>
         </div>
 
@@ -367,11 +367,11 @@
 
             <div class="image-grid">
                 <div>
-                    <img src="Nerf Turret Finished Base Plate.JPG" alt="Completed base plate with wiring" class="project-image">
+                    <img src="images/Nerf Turret Finished Base Plate.JPG" alt="Completed base plate with wiring" class="project-image">
                     <div class="image-caption">The finished base plate featuring completed wiring, installed slip gear, and main bearing.</div>
                 </div>
                 <div>
-                    <img src="Nerf Gun Internals.JPG" alt="Internals of the modified Nerf blaster" class="project-image">
+                    <img src="images/Nerf Gun Internals.JPG" alt="Internals of the modified Nerf blaster" class="project-image">
                     <div class="image-caption">Inside the Nerf gun: limit switches and factory controls removed to power the flywheel and hopper directly.</div>
                 </div>
             </div>
