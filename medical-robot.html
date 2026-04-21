@@ -231,6 +231,14 @@
             <p>For our Senior Design Capstone, our team designed, built, and validated the Medical Express Delivery System (MEDS). The objective was to create an autonomous robot (1 ft × 1 ft) capable of navigating a hospital environment, detecting "patient" distress signals via wearable sensors, and dispensing medication.</p>
             
             <div style="text-align: center; margin-top: 2rem; margin-bottom: 2rem;">
+                <video autoplay loop muted playsinline class="feature-img">
+                    <source src="images/meds-action-loop.mp4" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+                <div class="caption">The MEDS robot successfully identifying the Koozie dock and dispensing the payload.</div>
+            </div>
+
+            <div style="text-align: center; margin-top: 2rem; margin-bottom: 2rem;">
                 <img src="images/fullproduct.jpg" alt="Complete MEDS System" class="feature-img" loading="lazy">
                 <div class="caption">The complete system: Autonomous Robot, Koozie Docking Station, and Patient Wearables.</div>
             </div>
@@ -296,7 +304,7 @@
             <p>The system runs two primary threads. <strong>Thread 1</strong> hosts a Flask Web Server that listens for incoming HTTP POST requests from the wearables. <strong>Thread 2</strong> runs the main navigation loop. This separation ensures that a delay in network traffic never causes the robot's control loop to hang or stutter.</p>
 
             <h3>2. Wearable Signal Processing</h3>
-            <p>The wearable code (C++) implements a <strong>median filtering algorithm</strong> to clean the raw data from the thermistor. It takes a rapid burst of temperature readings, sorts them, and discards outliers to prevent false "fever" triggers from noise.</p>
+            <p>The wearable code (C++) implements a <strong>median filtering algorithm</strong> to clean the raw data from the thermistor. Because raw thermistor readings are inherently prone to electrical noise and fluctuations, this filtering significantly improves overall accuracy. By taking a rapid burst of temperature readings, sorting them, and discarding the extreme outliers, we ensure the robot is never accidentally dispatched due to a false "fever" spike.</p>
 
             <h3>3. Navigation Strategies: "Scanning" vs "Fast"</h3>
             <p>I developed two distinct navigation strategies:</p>
@@ -307,18 +315,16 @@
 
             <div style="margin-top: 3rem; background: #2d2d2d; padding: 2rem; border-radius: 8px;">
                 <h3 style="color: white; margin-top: 0;">Source Code Repository</h3>
-                <p style="color: #ccc; margin-bottom: 1.5rem;">Review the actual source code deployed on the robot and wearables.</p>
+                <p style="color: #ccc; margin-bottom: 1.5rem;">Review the actual Python and C++ source code deployed on the robot and wearables.</p>
                 <div class="resource-grid">
-                    <a href="documents/MEDS_Scanning_Code.txt" target="_blank" class="doc-btn code-btn">💻 Navigation with Ultrasonic Scan</a>
-                    <a href="documents/MEDS_Fast_Code.txt" target="_blank" class="doc-btn code-btn">💻 Fast Run (Dead Reckoning)</a>
-                    <a href="documents/Wearable_Code.txt" target="_blank" class="doc-btn code-btn">⌚ Wearable Firmware (C++)</a>
+                    <a href="https://github.com/Shunky59/Autonomous-Medical-Delivery-System" target="_blank" class="doc-btn code-btn" style="background-color: #1f2937; color: white; border-color: #111827;">🐙 View on GitHub</a>
                 </div>
             </div>
         </div>
 
         <div class="section-block">
             <h2>Mechanical Integration & Prototyping</h2>
-            <p>The mechanical design supported the electrical needs. We utilized a skid-steering drivetrain for zero-radius turning, allowing agility in tight hospital corridors. We validated this design early using a MATLAB trade study to ensure our motors provided sufficient torque.</p>
+            <p>The mechanical design heavily supported the electrical needs. We utilized a skid-steering drivetrain for zero-radius turning, allowing agility in tight hospital corridors. We deliberately chose this approach to achieve maximum maneuverability in the simplest possible fashion—minimizing the number of motors, sensors, and moving parts required. We validated this design early using a MATLAB trade study to ensure our motors provided sufficient torque for the weight of the chassis and payload.</p>
             
             <div class="grid-gallery">
                 <div class="gallery-item">
@@ -342,6 +348,7 @@
             
             <div class="resource-grid">
                 <a href="documents/designproposal.pdf" target="_blank" class="doc-btn">📝 Design Proposal</a>
+                <a href="documents/Critical%20Design%20Review.pdf" target="_blank" class="doc-btn">📑 Critical Design Review</a>
                 <a href="documents/Drivetrain_Trade_Study (1).pdf" target="_blank" class="doc-btn">📊 Trade Study</a>
                 <a href="documents/Design Specifications_revC.docx" target="_blank" class="doc-btn">📋 Design Specs</a>
                 <a href="documents/BOM.xlsx" target="_blank" class="doc-btn">🧾 Bill of Materials</a>
