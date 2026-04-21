@@ -298,13 +298,13 @@
 
         <div class="section-block">
             <h2>Software Architecture & Algorithms</h2>
-            <p>I developed the robot's control stack entirely in <strong>Python</strong>. The complexity of handling asynchronous network traffic while simultaneously driving the motors required a robust <strong>multi-threaded architecture</strong>.</p>
+            <p>I developed the robot's control stack entirely in Python. The complexity of handling asynchronous network traffic while simultaneously driving the motors required a robust multi-threaded architecture.</p>
             
             <h3>1. Threading & Network Logic</h3>
-            <p>The system runs two primary threads. <strong>Thread 1</strong> hosts a Flask Web Server that listens for incoming HTTP POST requests from the wearables. <strong>Thread 2</strong> runs the main navigation loop. This separation ensures that a delay in network traffic never causes the robot's control loop to hang or stutter.</p>
+            <p>The system runs two primary threads. Thread 1 hosts a Flask Web Server that listens for incoming HTTP POST requests from the wearables. Thread 2 runs the main navigation loop. This separation ensures that a delay in network traffic never causes the robot's control loop to hang or stutter.</p>
 
             <h3>2. Wearable Signal Processing</h3>
-            <p>The wearable code (C++) implements a <strong>median filtering algorithm</strong> to clean the raw data from the thermistor. Because raw thermistor readings are inherently prone to electrical noise and fluctuations, this filtering significantly improves overall accuracy. By taking a rapid burst of temperature readings, sorting them, and discarding the extreme outliers, we ensure the robot is never accidentally dispatched due to a false "fever" spike.</p>
+            <p>The wearable code (C++) implements a median filtering algorithm to clean the raw data from the thermistor. Because raw thermistor readings are inherently prone to electrical noise and fluctuations, this filtering significantly improves overall accuracy. By taking a rapid burst of temperature readings, sorting them, and discarding the extreme outliers, we ensure the robot is never accidentally dispatched due to a false "fever" spike.</p>
 
             <h3>3. Navigation Strategies: "Scanning" vs "Fast"</h3>
             <p>I developed two distinct navigation strategies:</p>
