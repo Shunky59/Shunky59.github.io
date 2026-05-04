@@ -106,6 +106,8 @@
 
         @media (max-width: 768px) {
             .container { padding: 1.5rem 1rem; }
+            .flex-row.responsive-stack { flex-direction: column; }
+            .flex-row.responsive-stack > div { width: 100%; }
         }
     </style>
 </head>
@@ -133,6 +135,30 @@
 
         <div class="card hidden" id="step2">
             <h2>Step 2: What did everyone order?</h2>
+            
+            <div class="person-container" style="background: #fffbeb; border-color: var(--gold); margin-bottom: 32px;">
+                <h3 style="margin-top: 0; color: var(--primary-color);">Shared Items</h3>
+                <p style="font-size: 0.9rem; color: var(--text-light); margin-top: -4px; margin-bottom: 16px;">Split appetizers, pitchers, or table fees evenly.</p>
+                
+                <div class="flex-row responsive-stack">
+                    <div>
+                        <label>Item Name (Optional)</label>
+                        <input type="text" id="sharedItemName" placeholder="e.g., Nachos">
+                    </div>
+                    <div>
+                        <label>Price</label>
+                        <input type="number" id="sharedItemPrice" placeholder="e.g. 12.50" step="0.01" min="0">
+                    </div>
+                </div>
+                
+                <label>Who shared this?</label>
+                <div id="sharedCheckboxes" style="display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; font-size: 0.95rem;">
+                    </div>
+                
+                <button onclick="addSharedItem()" class="gold-btn" style="width: auto;">Add Shared Item</button>
+                <div id="sharedItemsList" style="margin-top: 16px; display: flex; flex-direction: column; gap: 8px;"></div>
+            </div>
+
             <div id="peopleInputs"></div>
 
             <div style="background: #f8fafc; padding: 16px; border-radius: 8px; border: 1px solid var(--border); text-align: right; margin-bottom: 32px; font-size: 1.1rem;">
@@ -144,7 +170,7 @@
 
             <h2>Step 3: Receipt & Tip</h2>
             <label for="receiptTotal">Total Price on Receipt (including all tax/fees, BEFORE tip):</label>
-            <input type="number" id="receiptTotal" placeholder="e.g. 115.50" step="0.01">
+            <input type="number" id="receiptTotal" placeholder="e.g. 115.50" step="0.01" min="0">
 
             <label>Tip Method:</label>
             <div class="toggle-group">
@@ -153,7 +179,7 @@
             </div>
             
             <label id="tipLabel" for="tipInput">Tip Percentage (%):</label>
-            <input type="number" id="tipInput" value="20" step="0.01">
+            <input type="number" id="tipInput" value="20" step="0.01" min="0">
 
             <button onclick="calculateSplit()" class="gold-btn" style="margin-top: 16px;">Calculate Final Split</button>
         </div>
@@ -202,19 +228,100 @@
 
     <script>
         let people = [];
+        let sharedItems = [];
         let tipMode = 'pct';
         let finalOwedAmounts = [];
 
         function generatePeople() {
             const count = parseInt(document.getElementById('numPeople').value);
-            if (count < 1) return alert("Please enter at least 1 person.");
+            if (count < 1 || isNaN(count)) return alert("Please enter at least 1 person.");
             
             people = Array.from({length: count}, (_, i) => ({ id: i, name: `Person ${i+1}`, items: [] }));
+            sharedItems = []; // Reset shared items if regenerating table
+            
             renderPeopleInputs();
+            renderSharedCheckboxes();
+            renderSharedItemsList();
             
             document.getElementById('step1').classList.add('hidden');
             document.getElementById('step2').classList.remove('hidden');
         }
+
+        // --- SHARED ITEMS LOGIC ---
+
+        function renderSharedCheckboxes() {
+            const container = document.getElementById('sharedCheckboxes');
+            container.innerHTML = '';
+            people.forEach((p, index) => {
+                container.innerHTML += `
+                    <label style="display: flex; align-items: center; gap: 4px; font-weight: normal; color: var(--text-dark); margin: 0;">
+                        <input type="checkbox" class="shared-cb" data-index="${index}" checked> 
+                        <span id="cb_label_${index}">${p.name}</span>
+                    </label>
+                `;
+            });
+        }
+
+        function addSharedItem() {
+            const nameInput = document.getElementById('sharedItemName').value.trim() || 'Shared Item';
+            const price = parseFloat(document.getElementById('sharedItemPrice').value);
+            
+            // Validation
+            if (isNaN(price) || price < 0) return alert("Please enter a valid, positive price for the shared item.");
+            
+            const checkboxes = document.querySelectorAll('.shared-cb');
+            const sharedBy = [];
+            checkboxes.forEach(cb => {
+                if (cb.checked) sharedBy.push(parseInt(cb.getAttribute('data-index')));
+            });
+
+            if (sharedBy.length === 0) return alert("At least one person must be selected to share the item.");
+
+            sharedItems.push({ name: nameInput, price: price, sharedBy: sharedBy });
+            
+            // Reset fields
+            document.getElementById('sharedItemName').value = '';
+            document.getElementById('sharedItemPrice').value = '';
+            checkboxes.forEach(cb => cb.checked = true);
+
+            renderSharedItemsList();
+            updateAllPersonDisplays();
+        }
+
+        function removeSharedItem(index) {
+            sharedItems.splice(index, 1);
+            renderSharedItemsList();
+            updateAllPersonDisplays();
+        }
+
+        function renderSharedItemsList() {
+            const list = document.getElementById('sharedItemsList');
+            list.innerHTML = '';
+            sharedItems.forEach((item, index) => {
+                const names = item.sharedBy.map(i => people[i].name).join(', ');
+                list.innerHTML += `
+                    <div style="display: flex; justify-content: space-between; align-items: center; background: white; padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px;">
+                        <div>
+                            <strong>${item.name}</strong> - $${item.price.toFixed(2)}
+                            <div style="font-size: 0.8rem; color: var(--text-light);">Split by: ${names}</div>
+                        </div>
+                        <button class="undo-btn" style="width: auto; padding: 6px 12px; font-size: 0.85rem;" onclick="removeSharedItem(${index})">Remove</button>
+                    </div>
+                `;
+            });
+        }
+
+        function getPersonSharedTotal(personIndex) {
+            return sharedItems.reduce((total, item) => {
+                if (item.sharedBy.includes(personIndex)) {
+                    return total + (item.price / item.sharedBy.length);
+                }
+                return total;
+            }, 0);
+        }
+
+
+        // --- INDIVIDUAL ITEMS LOGIC ---
 
         function renderPeopleInputs() {
             const container = document.getElementById('peopleInputs');
@@ -228,47 +335,75 @@
                     <input type="text" value="${person.name}" onchange="updateName(${index}, this.value)">
                     <label>Add Item Price</label>
                     <div class="flex-row">
-                        <input type="number" id="itemInput_${index}" placeholder="e.g. 15.50" step="0.01">
+                        <input type="number" id="itemInput_${index}" placeholder="e.g. 15.50" step="0.01" min="0">
                         <button style="width: auto; padding: 10px 16px;" onclick="addItem(${index})">Add</button>
                         <button class="undo-btn" style="width: auto; padding: 10px 16px;" onclick="undoItem(${index})">Undo</button>
                     </div>
                     <div class="item-list" id="itemList_${index}">Items: None</div>
-                    <strong style="color: var(--primary-color);">Subtotal: $<span id="subtotal_${index}">0.00</span></strong>
+                    <div style="font-size: 0.85rem; color: var(--text-light); margin-bottom: 4px;" id="sharedPortion_${index}">Shared Portion: $0.00</div>
+                    <strong style="color: var(--primary-color);">Total Subtotal: $<span id="subtotal_${index}">0.00</span></strong>
                 `;
                 container.appendChild(div);
             });
-            updateGlobalSubtotal();
+            updateAllPersonDisplays();
         }
 
-        function updateName(index, name) { people[index].name = name; }
+        function updateName(index, name) { 
+            people[index].name = name; 
+            
+            // Update UI dependencies for the new name
+            const cbLabel = document.getElementById(`cb_label_${index}`);
+            if (cbLabel) cbLabel.innerText = name;
+            renderSharedItemsList();
+        }
 
-        function updateGlobalSubtotal() {
-            let total = 0;
-            people.forEach(p => {
-                total += p.items.reduce((a, b) => a + b, 0);
-            });
-            document.getElementById('step2-total-span').innerText = total.toFixed(2);
+        function updateAllPersonDisplays() {
+            people.forEach((_, index) => updatePersonDisplay(index));
+            updateGlobalSubtotal();
         }
 
         function updatePersonDisplay(index) {
             const itemList = document.getElementById(`itemList_${index}`);
+            
+            // Handle individual items display
             if (people[index].items.length > 0) {
-                itemList.innerHTML = 'Items: ' + people[index].items.map(p => `$${p.toFixed(2)}`).join(' + ');
+                itemList.innerHTML = 'Individual Items: ' + people[index].items.map(p => `$${p.toFixed(2)}`).join(' + ');
             } else {
-                itemList.innerHTML = 'Items: None';
+                itemList.innerHTML = 'Individual Items: None';
             }
-            const sub = people[index].items.reduce((a, b) => a + b, 0);
-            document.getElementById(`subtotal_${index}`).innerText = sub.toFixed(2);
+            
+            // Calculate totals
+            const indTotal = people[index].items.reduce((a, b) => a + b, 0);
+            const sharedTotal = getPersonSharedTotal(index);
+            const grandTotal = indTotal + sharedTotal;
+            
+            // Update UI
+            document.getElementById(`sharedPortion_${index}`).innerText = `Shared Portion: $${sharedTotal.toFixed(2)}`;
+            document.getElementById(`subtotal_${index}`).innerText = grandTotal.toFixed(2);
+        }
+
+        function updateGlobalSubtotal() {
+            let indTotal = 0;
+            people.forEach(p => indTotal += p.items.reduce((a, b) => a + b, 0));
+            
+            let sharedTotal = sharedItems.reduce((a, b) => a + b.price, 0);
+            
+            let grandTotal = indTotal + sharedTotal;
+            document.getElementById('step2-total-span').innerText = grandTotal.toFixed(2);
         }
 
         function addItem(index) {
             const input = document.getElementById(`itemInput_${index}`);
             const price = parseFloat(input.value);
-            if (!isNaN(price) && price > 0) {
+            
+            // Validation
+            if (!isNaN(price) && price >= 0) {
                 people[index].items.push(price);
                 input.value = '';
                 updatePersonDisplay(index);
                 updateGlobalSubtotal();
+            } else {
+                alert("Please enter a valid, positive price.");
             }
         }
 
@@ -279,6 +414,9 @@
                 updateGlobalSubtotal();
             }
         }
+
+
+        // --- SPLIT & CALCULATION LOGIC ---
 
         function setTipMode(mode) {
             tipMode = mode;
@@ -291,12 +429,20 @@
             const receiptTotal = parseFloat(document.getElementById('receiptTotal').value);
             const tipInputValue = parseFloat(document.getElementById('tipInput').value);
 
-            let totalSubtotal = 0;
-            people.forEach(p => { p.subtotal = p.items.reduce((a, b) => a + b, 0); totalSubtotal += p.subtotal; });
+            if (isNaN(receiptTotal) || receiptTotal < 0) return alert("Please enter a valid receipt total.");
+            if (isNaN(tipInputValue) || tipInputValue < 0) return alert("Please enter a valid tip amount.");
 
-            if (totalSubtotal === 0) return alert("Please add at least one item price to someone.");
-            if (isNaN(receiptTotal) || receiptTotal < totalSubtotal) {
-                return alert("Receipt total must be entered and cannot be less than the sum of the items.");
+            let totalSubtotal = 0;
+            people.forEach((p, index) => { 
+                const indTotal = p.items.reduce((a, b) => a + b, 0);
+                const sharedTotal = getPersonSharedTotal(index);
+                p.subtotal = indTotal + sharedTotal; 
+                totalSubtotal += p.subtotal; 
+            });
+
+            if (totalSubtotal === 0) return alert("Please add at least one item price or shared item to the table.");
+            if (receiptTotal < totalSubtotal) {
+                return alert("Receipt total cannot be less than the sum of the items. Please check your math.");
             }
 
             const totalTaxAndFees = receiptTotal - totalSubtotal;
@@ -358,13 +504,13 @@
             container.innerHTML = '';
             finalOwedAmounts.forEach((p, index) => {
                 container.innerHTML += `
-                    <div class="flex-row" style="margin-bottom: 16px; align-items: center; background: #f8fafc; padding: 12px; border-radius: 8px;">
+                    <div class="flex-row responsive-stack" style="margin-bottom: 16px; align-items: center; background: #f8fafc; padding: 12px; border-radius: 8px;">
                         <div style="flex: 2;">
                             <strong style="color: var(--primary-color);">${p.name}</strong><br>
                             <span style="font-size: 0.9rem; color: var(--text-light);">Owes: $${p.owed.toFixed(2)}</span>
                         </div>
                         <div style="flex: 1;">
-                            <input type="number" id="paid_${index}" value="${savedPayments[index]}" placeholder="Amount paid" style="margin-bottom:0;" step="0.01">
+                            <input type="number" id="paid_${index}" value="${savedPayments[index]}" placeholder="Amount paid" style="margin-bottom:0;" step="0.01" min="0">
                         </div>
                     </div>
                 `;
@@ -372,15 +518,12 @@
         }
 
         function addOverpaymentToTip(overpaymentAmount) {
-            // Get current total tip and add the overpayment to it
             let currentTip = parseFloat(document.getElementById('outTipAmt').innerText);
             let newTip = currentTip + overpaymentAmount;
             
-            // Switch UI to Flat Amount and set the value
             setTipMode('amt');
             document.getElementById('tipInput').value = newTip.toFixed(2);
             
-            // Recalculate everything (this preserves the cash inputs)
             calculateSplit();
             calculateSettlement();
         }
@@ -390,12 +533,20 @@
             let totalPaid = 0;
             let totalOwed = 0;
 
-            finalOwedAmounts.forEach((p, i) => {
-                const paid = parseFloat(document.getElementById(`paid_${i}`).value) || 0;
+            for (let i = 0; i < finalOwedAmounts.length; i++) {
+                const paidInput = document.getElementById(`paid_${i}`).value;
+                const paid = parseFloat(paidInput) || 0;
+                
+                // Validation
+                if (paid < 0) {
+                    alert(`Payment for ${finalOwedAmounts[i].name} cannot be negative.`);
+                    return;
+                }
+
                 totalPaid += paid;
-                totalOwed += p.owed;
-                balances.push({ name: p.name, balance: paid - p.owed });
-            });
+                totalOwed += finalOwedAmounts[i].owed;
+                balances.push({ name: finalOwedAmounts[i].name, balance: paid - finalOwedAmounts[i].owed });
+            }
 
             const resDiv = document.getElementById('settlementResults');
             resDiv.innerHTML = '';
