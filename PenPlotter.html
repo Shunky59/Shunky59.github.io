@@ -201,7 +201,7 @@
     <button class="btn-primary" onclick="generateGCode()">Generate G-Code</button>
 </div>
 
-<svg id="svgParser" style="display:none;"></svg>
+<svg id="svgParser" style="position: absolute; z-index: -100; opacity: 0; pointer-events: none;"></svg>
 
 <script>
     // --- State Variables ---
@@ -582,18 +582,23 @@
         selectedSvg = null; updateUI(); draw();
     }
 
-    // --- Core Data Parsing & Tracing ---
+    // --- Core Data Parsing & Tracing (NOW WITH CTM TRANSFORM SUPPORT) ---
     function processSVGData(svgString, isTraced = false, keepBorder = true) {
         const parser = new DOMParser();
         const doc = parser.parseFromString(svgString, "image/svg+xml");
         const parserSvg = document.getElementById('svgParser');
         parserSvg.innerHTML = ""; 
 
-        let pathsElements = doc.querySelectorAll('path, line, polyline, polygon, circle, ellipse, rect');
+        // Append the entire imported SVG so it retains its nested <g> tags and transforms
+        let importedSVG = document.importNode(doc.documentElement, true);
+        parserSvg.appendChild(importedSVG);
+
+        let pathsElements = importedSVG.querySelectorAll('path, line, polyline, polygon, circle, ellipse, rect');
         let parsedPaths = [];
         let xMin = Infinity, xMax = -Infinity, yMin = Infinity, yMax = -Infinity;
 
-        function sampleElement(element) {
+        // Helper function that now correctly multiplies points by the CSS transform matrix (CTM)
+        function sampleElement(element, ctm) {
             let length = element.getTotalLength ? element.getTotalLength() : 0;
             if(length === 0) return;
 
@@ -601,14 +606,31 @@
             let points = [];
             for(let i = 0; i <= numSamples; i++) {
                 let pt = element.getPointAtLength(i/numSamples * length);
-                points.push({x: pt.x, y: pt.y});
-                xMin = Math.min(xMin, pt.x); xMax = Math.max(xMax, pt.x);
-                yMin = Math.min(yMin, pt.y); yMax = Math.max(yMax, pt.y);
+                
+                let realX = pt.x;
+                let realY = pt.y;
+                
+                // If the element (or its <g> parent) had a transform, apply it to the point
+                if (ctm) {
+                    let svgPt = parserSvg.createSVGPoint();
+                    svgPt.x = pt.x;
+                    svgPt.y = pt.y;
+                    let transformed = svgPt.matrixTransform(ctm);
+                    realX = transformed.x;
+                    realY = transformed.y;
+                }
+
+                points.push({x: realX, y: realY});
+                xMin = Math.min(xMin, realX); xMax = Math.max(xMax, realX);
+                yMin = Math.min(yMin, realY); yMax = Math.max(yMax, realY);
             }
             parsedPaths.push({ points: points });
         }
 
         pathsElements.forEach(el => {
+            // Grab the absolute transformation matrix of the element from the DOM before we pull the d string
+            let ctm = el.getCTM ? el.getCTM() : null;
+
             if (el.tagName.toLowerCase() === 'path') {
                 let d = el.getAttribute('d');
                 if (!d) return;
@@ -631,21 +653,16 @@
                             let dy = parseFloat(match[2]);
                             let remaining = match[3].trim();
                             
-                            // Prevent trailing commas from ruining the regex check
-                            if (remaining.startsWith(',')) {
-                                remaining = remaining.substring(1).trim();
-                            }
+                            if (remaining.startsWith(',')) remaining = remaining.substring(1).trim();
                             
                             let absX = (cmd === 'm' && !isFirstMove) ? lastPt.x + dx : dx;
                             let absY = (cmd === 'm' && !isFirstMove) ? lastPt.y + dy : dy;
 
                             if (remaining) {
-                                // ONLY add an implicit lineto if the next characters are numbers
                                 if (/^[+-]?[\d.]/.test(remaining)) {
                                     let lineCmd = (cmd === 'm') ? 'l' : 'L';
                                     subD = `M ${absX} ${absY} ${lineCmd} ${remaining}`;
                                 } else {
-                                    // Otherwise, leave the existing command alone
                                     subD = `M ${absX} ${absY} ${remaining}`;
                                 }
                             } else {
@@ -662,21 +679,18 @@
                     
                     let len = subEl.getTotalLength ? subEl.getTotalLength() : 0;
                     if (subEl.getPointAtLength) {
-                        try {
-                            lastPt = subEl.getPointAtLength(len);
-                        } catch(e) {}
+                        try { lastPt = subEl.getPointAtLength(len); } catch(e) {}
                     }
                     
-                    sampleElement(subEl);
+                    sampleElement(subEl, ctm); // We pass the CTM here to reposition the raw path correctly!
                     parserSvg.removeChild(subEl);
                 });
             } else {
-                let clone = el.cloneNode(true);
-                parserSvg.appendChild(clone);
-                sampleElement(clone);
-                parserSvg.removeChild(clone);
+                sampleElement(el, ctm);
             }
         });
+
+        parserSvg.innerHTML = ""; // Clean up the DOM to stay optimized
 
         if(parsedPaths.length === 0) return null;
 
