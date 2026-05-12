@@ -310,9 +310,9 @@
         ctx.strokeStyle = "#444"; ctx.lineWidth = 2;
         ctx.strokeRect(b1.x, b1.y, b2.x - b1.x, b2.y - b1.y);
 
-        // Draw Hardware Printable Area (Safe Zone based on offsets)
-        let safeMinX = Math.max(0, -hw.offX);
-        let safeMaxX = Math.min(BED_W, BED_W - hw.offX);
+        // Draw Hardware Printable Area (Safe Zone based on RIGHT offsets)
+        let safeMinX = Math.max(0, hw.offX); 
+        let safeMaxX = Math.min(BED_W, BED_W + hw.offX); 
         let safeMinY = Math.max(0, -hw.offY);
         let safeMaxY = Math.min(BED_H, BED_H - hw.offY);
         
@@ -593,12 +593,10 @@
         let parsedPaths = [];
         let xMin = Infinity, xMax = -Infinity, yMin = Infinity, yMax = -Infinity;
 
-        // Helper function to sample points from an individual element
         function sampleElement(element) {
             let length = element.getTotalLength ? element.getTotalLength() : 0;
             if(length === 0) return;
 
-            // Sample roughly every 0.5mm
             let numSamples = Math.max(10, Math.ceil(length / 0.5));
             let points = [];
             for(let i = 0; i <= numSamples; i++) {
@@ -615,7 +613,6 @@
                 let d = el.getAttribute('d');
                 if (!d) return;
 
-                // Split the path data at every "Move" command (M or m)
                 let subPathStrings = d.split(/(?=[Mm])/);
                 let lastPt = {x: 0, y: 0}; 
                 let isFirstMove = true;
@@ -628,21 +625,29 @@
                     let rest = subD.substring(1).trim();
 
                     if (cmd === 'm' || cmd === 'M') {
-                        // Highly robust numerical regex to catch coordinates safely even when SVGs strip out spaces before minus signs (e.g., m20.5-10.2)
                         let match = rest.match(/^([+-]?\d*\.?\d+(?:[eE][+-]?\d+)?)(?:[,\s]+|(?=[+-]))([+-]?\d*\.?\d+(?:[eE][+-]?\d+)?)(.*)/is);
                         if (match) {
                             let dx = parseFloat(match[1]);
                             let dy = parseFloat(match[2]);
                             let remaining = match[3].trim();
                             
-                            // First 'm' in a path sequence is natively absolute, subsequent 'm' commands are relative to the last drawn coordinate
+                            // Prevent trailing commas from ruining the regex check
+                            if (remaining.startsWith(',')) {
+                                remaining = remaining.substring(1).trim();
+                            }
+                            
                             let absX = (cmd === 'm' && !isFirstMove) ? lastPt.x + dx : dx;
                             let absY = (cmd === 'm' && !isFirstMove) ? lastPt.y + dy : dy;
 
-                            // If implicit linetos exist after the move, make them explicit relative linetos
                             if (remaining) {
-                                let lineCmd = (cmd === 'm') ? 'l' : 'L';
-                                subD = `M ${absX} ${absY} ${lineCmd} ${remaining}`;
+                                // ONLY add an implicit lineto if the next characters are numbers
+                                if (/^[+-]?[\d.]/.test(remaining)) {
+                                    let lineCmd = (cmd === 'm') ? 'l' : 'L';
+                                    subD = `M ${absX} ${absY} ${lineCmd} ${remaining}`;
+                                } else {
+                                    // Otherwise, leave the existing command alone
+                                    subD = `M ${absX} ${absY} ${remaining}`;
+                                }
                             } else {
                                 subD = `M ${absX} ${absY}`;
                             }
@@ -655,7 +660,6 @@
                     subEl.setAttribute('d', subD);
                     parserSvg.appendChild(subEl);
                     
-                    // Track where this subpath literally ends so the next 'm' knows where to start without drifting
                     let len = subEl.getTotalLength ? subEl.getTotalLength() : 0;
                     if (subEl.getPointAtLength) {
                         try {
@@ -664,7 +668,6 @@
                     }
                     
                     sampleElement(subEl);
-                    
                     parserSvg.removeChild(subEl);
                 });
             } else {
@@ -677,12 +680,10 @@
 
         if(parsedPaths.length === 0) return null;
 
-        // --- BORDER REMOVAL LOGIC ---
         if (isTraced && !keepBorder) {
             let totalW = xMax - xMin;
             let totalH = yMax - yMin;
             
-            // Filter out paths that map to the extreme edges (the background box)
             parsedPaths = parsedPaths.filter(path => {
                 if (path.points.length === 0) return false;
                 let pxMin = Infinity, pxMax = -Infinity, pyMin = Infinity, pyMax = -Infinity;
@@ -694,14 +695,12 @@
                 let pw = pxMax - pxMin;
                 let ph = pyMax - pyMin;
                 
-                // If a path spans >= 95% of the total canvas size, it is treated as a bounding box and destroyed
                 if (totalW > 0 && totalH > 0 && pw >= totalW * 0.95 && ph >= totalH * 0.95) {
                     return false; 
                 }
                 return true; 
             });
 
-            // Recalculate true boundaries without the invisible box throwing off math
             xMin = Infinity; xMax = -Infinity; yMin = Infinity; yMax = -Infinity;
             parsedPaths.forEach(path => {
                 path.points.forEach(pt => {
@@ -710,7 +709,6 @@
                 });
             });
 
-            // Failsafe incase deleting the border removed literally everything
             if (xMin === Infinity) { xMin = 0; xMax = 10; yMin = 0; yMax = 10; }
         }
 
@@ -780,14 +778,11 @@
             if(!newSvg) { alert("Tracing failed or produced no paths."); return; }
 
             if(lastTracedSvg && svgs.includes(lastTracedSvg)) {
-                
-                // Keep the exact same physical scale (mm per trace-pixel) so it doesn't warp or jump in size
                 let oldMmPerPixel = lastTracedSvg.w / lastTracedSvg.origW;
                 
                 newSvg.w = newSvg.origW * oldMmPerPixel;
                 newSvg.h = newSvg.origH * oldMmPerPixel;
                 
-                // Center it exactly where the old one was
                 let oldCx = lastTracedSvg.x + lastTracedSvg.w / 2;
                 let oldCy = lastTracedSvg.y + lastTracedSvg.h / 2;
                 newSvg.x = oldCx - newSvg.w / 2;
@@ -823,16 +818,12 @@
                     let inkY = svg.y + svg.h - ((pt.y - svg.rawYmin) * scaleY);
                     let rotPt = rotatePoint(inkX, inkY, cx, cy, -svg.rot);
 
-                    let checkNozX = rotPt.x + hw.offX; 
+                    let checkNozX = rotPt.x - hw.offX; 
                     let checkNozY = rotPt.y + hw.offY;
 
-                    // CHECK 1: Is the Extruder Nozzle out of bounds? (Causes squishing/crashing)
                     if(checkNozX < 0 || checkNozX > BED_W || checkNozY < 0 || checkNozY > BED_H) {
                         isHardwareSquish = true;
                     }
-
-                    // CHECK 2: Is the Pen off the edge of the steel plate? (Causes drawing on air)
-                    // We only check this if the nozzle hasn't already triggered the squish error.
                     if(rotPt.x < 0 || rotPt.x > BED_W || rotPt.y < 0 || rotPt.y > BED_H) {
                         isDrawingOnAir = true;
                     }
@@ -840,7 +831,6 @@
             });
         });
 
-        // Hierarchy of warnings. Squishing is more mechanically relevant than drawing on air.
         if(isHardwareSquish) {
             let proceed = confirm("⚠️ WARNING: Part of your drawing is outside the red dashed safe zone!\n\nBecause the pen is offset from the nozzle, the actual printable area is smaller than the steel sheet. Anything outside the red box will be squished into a straight line.\n\nDo you want to generate the G-Code anyway?");
             if(!proceed) return;
@@ -849,7 +839,6 @@
             if(!proceed) return;
         }
 
-        // --- GENERATE GCODE ---
         let zDraw = hw.zCal - hw.zPres;
         let zTravel = hw.zCal + 5.0;
         let speedTravel = 6000;
@@ -880,9 +869,8 @@
                     let inkY = svg.y + svg.h - ((pt.y - svg.rawYmin) * scaleY);
                     let rotPt = rotatePoint(inkX, inkY, cx, cy, -svg.rot);
 
-                    let nozX = rotPt.x + hw.offX; let nozY = rotPt.y + hw.offY;
+                    let nozX = rotPt.x - hw.offX; let nozY = rotPt.y + hw.offY;
 
-                    // Clamp to physical bed limits so printer doesn't crash into endstops
                     nozX = Math.max(0, Math.min(BED_W, nozX)); nozY = Math.max(0, Math.min(BED_H, nozY));
 
                     if(i === 0) {
@@ -908,7 +896,6 @@
         a.click(); URL.revokeObjectURL(url);
     }
 
-    // Init
     updateUI();
     resizeCanvas();
 </script>
