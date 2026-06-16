@@ -126,6 +126,10 @@
             </select>
         </div>
         <div class="row">
+            <label>Show Prusa Bed:</label>
+            <input type="checkbox" id="showPrusaBed" checked onchange="draw()">
+        </div>
+        <div class="row">
             <label>Preset:</label>
             <select id="paperPreset" onchange="applyPaperPreset()">
                 <option value="letter">Letter (8.5x11 in)</option>
@@ -194,7 +198,7 @@
         <h3>Printer Hardware</h3>
         <div class="row"><label>Pen Offset X (<span class="unit-label">mm</span>):</label><input type="text" id="offX" onchange="applyHardware()"></div>
         <div class="row"><label>Pen Offset Y (<span class="unit-label">mm</span>):</label><input type="text" id="offY" onchange="applyHardware()"></div>
-        <div class="row"><label>Pen Extension (<span class="unit-label">mm</span>):</label><input type="text" id="zCal" onchange="applyHardware()"></div>
+        <div class="row"><label>Z Pause Hgt (<span class="unit-label">mm</span>):</label><input type="text" id="zCal" onchange="applyHardware()"></div>
         <div class="row"><label>Z Pressure (<span class="unit-label">mm</span>):</label><input type="text" id="zPres" onchange="applyHardware()"></div>
     </div>
 
@@ -217,7 +221,7 @@
     
     let currentUnit = 'mm';
     let paper = { x: 0, y: 0, w: 215.9, h: 279.4, portrait: true };
-    let hw = { offX: -35.0, offY: 20.0, zCal: 4.0, zPres: 1.0 }; 
+    let hw = { offX: 35.0, offY: 0.0, zCal: 10.0, zPres: 1.0 }; 
     let svgs = [];
     let selectedSvg = null;
     
@@ -278,12 +282,10 @@
         return { x: (rx + viewPanX) * viewZoom, y: (BED_H - ry + viewPanY) * viewZoom };
     }
 
-    // Coordinates mapping logic
     function toReal(sx, sy) {
         return { x: (sx / viewZoom) - viewPanX, y: BED_H - (sy / viewZoom) + viewPanY };
     }
 
-    // Rotates point around a coordinate system center (clockwise)
     function rotatePoint(x, y, cx, cy, angleDeg) {
         let rad = angleDeg * Math.PI / 180;
         return {
@@ -295,24 +297,61 @@
     // --- Drawing System ---
     function draw() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
-        // Draw Grid
-        ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1;
-        for (let i = 0; i <= BED_W; i += 10) {
-            let p1 = toScreen(i, 0), p2 = toScreen(i, BED_H);
-            ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
-        }
-        for (let i = 0; i <= BED_H; i += 10) {
-            let p1 = toScreen(0, i), p2 = toScreen(BED_W, i);
-            ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
-        }
-
-        // Draw Print Bed Outline
+        let showPrusaBed = document.getElementById('showPrusaBed').checked;
         let b1 = toScreen(0, BED_H), b2 = toScreen(BED_W, 0);
-        ctx.strokeStyle = "#444"; ctx.lineWidth = 2;
-        ctx.strokeRect(b1.x, b1.y, b2.x - b1.x, b2.y - b1.y);
 
-        // Draw Hardware Printable Area (Safe Zone based on offsets)
+        if (showPrusaBed) {
+            // Draw Authentic Prusa Bed Style
+            ctx.fillStyle = "#8a948c"; // PEI sheet green-grey
+            ctx.fillRect(b1.x, b1.y, b2.x - b1.x, b2.y - b1.y);
+            
+            // Prusa Grid (50mm increments)
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.6)"; 
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([6, 6]); 
+            
+            ctx.beginPath();
+            for (let i = 50; i < BED_W; i += 50) {
+                let p1 = toScreen(i, 0), p2 = toScreen(i, BED_H);
+                ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y);
+            }
+            for (let i = 50; i < BED_H; i += 50) {
+                let p1 = toScreen(0, i), p2 = toScreen(BED_W, i);
+                ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y);
+            }
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            // Solid border mimicking the painted outline
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
+            ctx.lineWidth = 2;
+            ctx.strokeRect(b1.x, b1.y, b2.x - b1.x, b2.y - b1.y);
+
+            // Print area text marker
+            ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
+            ctx.font = "bold 14px Arial";
+            ctx.textAlign = "right";
+            ctx.fillText("ORIGINAL PRUSA", b2.x - 10, b2.y - 10);
+            ctx.textAlign = "left";
+            ctx.fillText("LPrint area", b1.x + 10, b1.y - 10);
+
+        } else {
+            // Draw Default Standard Grid
+            ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1;
+            for (let i = 0; i <= BED_W; i += 10) {
+                let p1 = toScreen(i, 0), p2 = toScreen(i, BED_H);
+                ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+            }
+            for (let i = 0; i <= BED_H; i += 10) {
+                let p1 = toScreen(0, i), p2 = toScreen(BED_W, i);
+                ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+            }
+            // Outline
+            ctx.strokeStyle = "#444"; ctx.lineWidth = 2;
+            ctx.strokeRect(b1.x, b1.y, b2.x - b1.x, b2.y - b1.y);
+        }
+
+        // Draw Hardware Printable Area (Safe Zone based on RIGHT offsets)
         let safeMinX = Math.max(0, hw.offX); 
         let safeMaxX = Math.min(BED_W, BED_W + hw.offX); 
         let safeMinY = Math.max(0, -hw.offY);
@@ -335,7 +374,7 @@
 
         // Draw Paper
         let p1 = toScreen(paper.x, paper.y + paper.h), p2 = toScreen(paper.x + paper.w, paper.y);
-        ctx.fillStyle = "#ffffff"; ctx.fillRect(p1.x, p1.y, p2.x - p1.x, p2.y - p1.y);
+        ctx.fillStyle = "rgba(255, 255, 255, 0.85)"; ctx.fillRect(p1.x, p1.y, p2.x - p1.x, p2.y - p1.y);
         ctx.strokeStyle = "#999"; ctx.strokeRect(p1.x, p1.y, p2.x - p1.x, p2.y - p1.y);
 
         // Draw SVG Objects
@@ -584,13 +623,14 @@
         selectedSvg = null; updateUI(); draw();
     }
 
-    // --- Core Data Parsing & Tracing ---
+    // --- Core Data Parsing & Tracing (NOW WITH CTM TRANSFORM SUPPORT) ---
     function processSVGData(svgString, isTraced = false, keepBorder = true) {
         const parser = new DOMParser();
         const doc = parser.parseFromString(svgString, "image/svg+xml");
         const parserSvg = document.getElementById('svgParser');
         parserSvg.innerHTML = ""; 
 
+        // Append the entire imported SVG so it retains its nested <g> tags and transforms
         let importedSVG = document.importNode(doc.documentElement, true);
         parserSvg.appendChild(importedSVG);
 
@@ -598,6 +638,7 @@
         let parsedPaths = [];
         let xMin = Infinity, xMax = -Infinity, yMin = Infinity, yMax = -Infinity;
 
+        // Helper function that now correctly multiplies points by the CSS transform matrix (CTM)
         function sampleElement(element, ctm) {
             let length = element.getTotalLength ? element.getTotalLength() : 0;
             if(length === 0) return;
@@ -610,6 +651,7 @@
                 let realX = pt.x;
                 let realY = pt.y;
                 
+                // If the element (or its <g> parent) had a transform, apply it to the point
                 if (ctm) {
                     let svgPt = parserSvg.createSVGPoint();
                     svgPt.x = pt.x;
@@ -627,6 +669,7 @@
         }
 
         pathsElements.forEach(el => {
+            // Grab the absolute transformation matrix of the element from the DOM before we pull the d string
             let ctm = el.getCTM ? el.getCTM() : null;
 
             if (el.tagName.toLowerCase() === 'path') {
@@ -680,7 +723,7 @@
                         try { lastPt = subEl.getPointAtLength(len); } catch(e) {}
                     }
                     
-                    sampleElement(subEl, ctm); 
+                    sampleElement(subEl, ctm); // We pass the CTM here to reposition the raw path correctly!
                     parserSvg.removeChild(subEl);
                 });
             } else {
@@ -688,7 +731,7 @@
             }
         });
 
-        parserSvg.innerHTML = "";
+        parserSvg.innerHTML = ""; // Clean up the DOM to stay optimized
 
         if(parsedPaths.length === 0) return null;
 
@@ -863,12 +906,12 @@
             "M104 S0 ; Extruder off",
             "M140 S0 ; Bed off",
             "G28 ; Home axes",
-            `G1 Z${zTravel.toFixed(2)} F${speedTravel}`,
-            "M0 Click screen knob to begin plot ; Safety Pause",
-            "M117 Plotting... Turn knob to Live-Adjust Z"
+            `G1 Z${hw.zCal.toFixed(2)} F${speedTravel}`,
+            "M117 Insert Pen & Touch Paper",
+            "M0 Insert pen, gently touch paper, tighten mount. Click knob.",
+            `G1 Z${zTravel.toFixed(2)} F${speedTravel}`
         ];
 
-        // Draw vectors exactly as structured originally
         svgs.forEach(svg => {
             let scaleX = svg.w / svg.origW; let scaleY = svg.h / svg.origH;
             let cx = svg.x + svg.w / 2; let cy = svg.y + svg.h / 2;
