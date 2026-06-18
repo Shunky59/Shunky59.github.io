@@ -150,6 +150,15 @@
     </div>
 
     <div class="control-group" style="background: #fafafa;">
+        <div class="row" style="margin-bottom: 10px;">
+            <label title="Lower = more detailed curves. Higher = faster loading.">Import Quality:</label>
+            <select id="svgRes">
+                <option value="0.5">Ultra (Very Slow)</option>
+                <option value="1.0">High</option>
+                <option value="2.5" selected>Standard (Fast)</option>
+                <option value="5.0">Low (Fastest)</option>
+            </select>
+        </div>
         <input type="file" id="svgInput" accept=".svg" style="display: none;" onchange="handleSvgUpload(event)">
         <button onclick="document.getElementById('svgInput').click()" style="width: 100%; margin-bottom: 8px; padding: 10px; font-weight: bold;">Load Vector (SVG)</button>
         
@@ -360,8 +369,8 @@
         // Draw Hardware Printable Area (Safe Zone based on RIGHT offsets)
         let safeMinX = Math.max(0, hw.offX); 
         let safeMaxX = Math.min(BED_W, BED_W + hw.offX); 
-        let safeMinY = Math.max(0, -hw.offY);
-        let safeMaxY = Math.min(BED_H, BED_H - hw.offY);
+        let safeMinY = Math.max(0, -hw.offY);  
+        let safeMaxY = Math.min(BED_H, BED_H - hw.offY); 
         
         if (safeMaxX > safeMinX && safeMaxY > safeMinY) {
             let sP1 = toScreen(safeMinX, safeMaxY);
@@ -629,14 +638,13 @@
         selectedSvg = null; updateUI(); draw();
     }
 
-    // --- Core Data Parsing & Tracing (NOW WITH CTM TRANSFORM SUPPORT) ---
+    // --- Core Data Parsing & Tracing ---
     function processSVGData(svgString, isTraced = false, keepBorder = true) {
         const parser = new DOMParser();
         const doc = parser.parseFromString(svgString, "image/svg+xml");
         const parserSvg = document.getElementById('svgParser');
         parserSvg.innerHTML = ""; 
 
-        // Append the entire imported SVG so it retains its nested <g> tags and transforms
         let importedSVG = document.importNode(doc.documentElement, true);
         parserSvg.appendChild(importedSVG);
 
@@ -644,12 +652,18 @@
         let parsedPaths = [];
         let xMin = Infinity, xMax = -Infinity, yMin = Infinity, yMax = -Infinity;
 
-        // Helper function that now correctly multiplies points by the CSS transform matrix (CTM)
+        // Fetch User Resolution Quality
+        let resSelect = document.getElementById('svgRes');
+        let qualityRes = resSelect ? parseFloat(resSelect.value) : 2.5;
+
         function sampleElement(element, ctm) {
             let length = element.getTotalLength ? element.getTotalLength() : 0;
             if(length === 0) return;
 
-            let numSamples = Math.max(10, Math.ceil(length / 0.5));
+            // OPTIMIZATION: Dynamically scale points based on user quality, with a hard safety cap
+            let numSamples = Math.max(5, Math.ceil(length / qualityRes));
+            if (numSamples > 3000) numSamples = 3000; // Hard cap prevents browser crash on huge internal coordinates
+
             let points = [];
             for(let i = 0; i <= numSamples; i++) {
                 let pt = element.getPointAtLength(i/numSamples * length);
@@ -657,7 +671,6 @@
                 let realX = pt.x;
                 let realY = pt.y;
                 
-                // If the element (or its <g> parent) had a transform, apply it to the point
                 if (ctm) {
                     let svgPt = parserSvg.createSVGPoint();
                     svgPt.x = pt.x;
@@ -675,7 +688,6 @@
         }
 
         pathsElements.forEach(el => {
-            // Grab the absolute transformation matrix of the element from the DOM before we pull the d string
             let ctm = el.getCTM ? el.getCTM() : null;
 
             if (el.tagName.toLowerCase() === 'path') {
@@ -729,7 +741,7 @@
                         try { lastPt = subEl.getPointAtLength(len); } catch(e) {}
                     }
                     
-                    sampleElement(subEl, ctm); // We pass the CTM here to reposition the raw path correctly!
+                    sampleElement(subEl, ctm); 
                     parserSvg.removeChild(subEl);
                 });
             } else {
@@ -737,7 +749,7 @@
             }
         });
 
-        parserSvg.innerHTML = ""; // Clean up the DOM to stay optimized
+        parserSvg.innerHTML = ""; 
 
         if(parsedPaths.length === 0) return null;
 
@@ -798,15 +810,39 @@
         reader.readAsText(file);
     }
 
+    // --- OPTIMIZED IMAGE TRACING SYSTEM ---
     function handleImageUpload(event) {
         const file = event.target.files[0];
         if (!file) return;
         const reader = new FileReader();
         reader.onload = function(e) {
-            lastRasterImage = e.target.result;
-            document.getElementById('imgControls').style.display = 'block';
-            lastTracedSvg = null; 
-            runImageTracer();
+            let img = new Image();
+            img.onload = function() {
+                // Pre-process: Downscale huge smartphone photos to prevent trace engine freezing
+                let maxDim = 800;
+                let w = img.width; let h = img.height;
+                
+                if (w > maxDim || h > maxDim) {
+                    let ratio = Math.min(maxDim / w, maxDim / h);
+                    w = Math.round(w * ratio);
+                    h = Math.round(h * ratio);
+                }
+                
+                let tempCanvas = document.createElement('canvas');
+                tempCanvas.width = w; tempCanvas.height = h;
+                let tCtx = tempCanvas.getContext('2d');
+                
+                // Pre-process: Fill white background to prevent transparent PNGs from tracing poorly
+                tCtx.fillStyle = "#ffffff"; 
+                tCtx.fillRect(0, 0, w, h);
+                tCtx.drawImage(img, 0, 0, w, h);
+                
+                lastRasterImage = tempCanvas.toDataURL('image/png');
+                document.getElementById('imgControls').style.display = 'block';
+                lastTracedSvg = null; 
+                runImageTracer();
+            };
+            img.src = e.target.result;
             event.target.value = ""; 
         };
         reader.readAsDataURL(file);
@@ -880,7 +916,7 @@
                     let rotPt = rotatePoint(inkX, inkY, cx, cy, -svg.rot);
 
                     let checkNozX = rotPt.x - hw.offX; 
-                    let checkNozY = rotPt.y + hw.offY;
+                    let checkNozY = rotPt.y + hw.offY; 
 
                     if(checkNozX < 0 || checkNozX > BED_W || checkNozY < 0 || checkNozY > BED_H) {
                         isHardwareSquish = true;
@@ -930,7 +966,8 @@
                     let inkY = svg.y + svg.h - ((pt.y - svg.rawYmin) * scaleY);
                     let rotPt = rotatePoint(inkX, inkY, cx, cy, -svg.rot);
 
-                    let nozX = rotPt.x - hw.offX; let nozY = rotPt.y + hw.offY;
+                    let nozX = rotPt.x - hw.offX; 
+                    let nozY = rotPt.y + hw.offY; 
 
                     nozX = Math.max(0, Math.min(BED_W, nozX)); nozY = Math.max(0, Math.min(BED_H, nozY));
 
