@@ -110,7 +110,7 @@
             <button onclick="zoomCanvas(1.2)">Zoom In (+)</button>
         </div>
     </div>
-    <div style="font-size: 12px; color: gray; margin-bottom: 5px;">Left-Click & Drag: Move/Resize | Right-Click & Drag: Pan</div>
+    <div style="font-size: 12px; color: gray; margin-bottom: 5px;">Left-Click & Drag: Move/Resize | Right-Click: Pan | Del: Delete | Ctrl+C/V: Copy/Paste</div>
     <canvas id="workspace"></canvas>
 </div>
 
@@ -230,9 +230,10 @@
     
     let currentUnit = 'mm';
     let paper = { x: 0, y: 0, w: 215.9, h: 279.4, portrait: true };
-    let hw = { offX: -35.0, offY: 20.0, zCal: 4.0, zPres: 1.0 }; 
+    let hw = { offX: -35.0, offY: 38.0, zCal: 4.0, zPres: 1.0 }; 
     let svgs = [];
     let selectedSvg = null;
+    let clipboardSvg = null;
     
     let isDragging = false;
     let dragType = null;
@@ -527,6 +528,78 @@
 
     window.addEventListener('mouseup', () => { isDragging = false; isPanning = false; });
     canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+    // --- Keyboard Shortcuts (Copy, Paste, Delete) ---
+    window.addEventListener('keydown', e => {
+        // Ignore if user is typing inside an input or select box
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+
+        // Delete or Backspace
+        if (e.key === 'Delete' || e.key === 'Backspace') {
+            if (selectedSvg) {
+                deleteSVG();
+            }
+        }
+
+        // Ctrl+C / Cmd+C (Copy)
+        if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'C')) {
+            if (selectedSvg) {
+                // Deep copy paths to avoid coordinate mutation
+                let copiedPaths = selectedSvg.paths.map(path => {
+                    return {
+                        points: path.points.map(pt => ({ x: pt.x, y: pt.y }))
+                    };
+                });
+                
+                clipboardSvg = {
+                    paths: copiedPaths,
+                    origW: selectedSvg.origW,
+                    origH: selectedSvg.origH,
+                    rawXmin: selectedSvg.rawXmin,
+                    rawYmin: selectedSvg.rawYmin,
+                    w: selectedSvg.w,
+                    h: selectedSvg.h,
+                    rot: selectedSvg.rot,
+                    x: selectedSvg.x,
+                    y: selectedSvg.y
+                };
+            }
+        }
+
+        // Ctrl+V / Cmd+V (Paste)
+        if ((e.ctrlKey || e.metaKey) && (e.key === 'v' || e.key === 'V')) {
+            if (clipboardSvg) {
+                // Deep copy again when pasting so multiple pastes stay fully independent
+                let pastedPaths = clipboardSvg.paths.map(path => {
+                    return {
+                        points: path.points.map(pt => ({ x: pt.x, y: pt.y }))
+                    };
+                });
+
+                let newSvg = {
+                    paths: pastedPaths,
+                    origW: clipboardSvg.origW,
+                    origH: clipboardSvg.origH,
+                    rawXmin: clipboardSvg.rawXmin,
+                    rawYmin: clipboardSvg.rawYmin,
+                    w: clipboardSvg.w,
+                    h: clipboardSvg.h,
+                    rot: clipboardSvg.rot,
+                    x: clipboardSvg.x + 10, // Offset paste position slightly
+                    y: clipboardSvg.y - 10  // Move down visually
+                };
+
+                // Move clipboard origin so multiple quick pastes stagger themselves
+                clipboardSvg.x += 10;
+                clipboardSvg.y -= 10;
+
+                svgs.push(newSvg);
+                selectedSvg = newSvg;
+                updateUI();
+                draw();
+            }
+        }
+    });
 
     // --- UI Logic ---
     function resetView() { viewZoom = 2.5; viewPanX = 20.0; viewPanY = 20.0; draw(); }
