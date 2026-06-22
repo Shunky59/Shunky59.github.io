@@ -136,6 +136,7 @@
                 <option value="a4">A4 (210x297 mm)</option>
                 <option value="stationary">Personal Stationary (6x4.5 in)</option>
                 <option value="index">Index Card (3x5 in)</option>
+                <option value="index4x6">Index Card (4x6 in)</option>
                 <option value="custom">Custom</option>
             </select>
         </div>
@@ -413,11 +414,11 @@
             ctx.lineWidth = 1;
             
             if (lineType === 'college') {
-                startY = 31.75; step = 7.1; marginX = 31.75;
+                startY = 31.75; step = 7.14; marginX = 31.75;
             } else if (lineType === 'wide') {
-                startY = 31.75; step = 8.7; marginX = 31.75;
+                startY = 31.75; step = 8.73; marginX = 31.75;
             } else if (lineType === 'index') {
-                startY = 22.2; step = 6.35; marginX = 0;
+                startY = 15.875; step = 6.35; marginX = 0; // Exactly 5/8" top margin and 1/4" spacing
             }
 
             // Vertical Margin Line (Red)
@@ -645,6 +646,7 @@
         else if(val === 'a4') { paper.w = 210.0; paper.h = 297.0; }
         else if(val === 'stationary') { paper.w = 114.3; paper.h = 152.4; } 
         else if(val === 'index') { paper.w = 76.2; paper.h = 127.0; }
+        else if(val === 'index4x6') { paper.w = 101.6; paper.h = 152.4; }
         
         if(val !== 'custom') {
             if(!paper.portrait) { let t = paper.w; paper.w = paper.h; paper.h = t; }
