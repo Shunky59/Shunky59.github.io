@@ -134,8 +134,18 @@
             <select id="paperPreset" onchange="applyPaperPreset()">
                 <option value="letter">Letter (8.5x11 in)</option>
                 <option value="a4">A4 (210x297 mm)</option>
+                <option value="stationary">Personal Stationary (6x4.5 in)</option>
                 <option value="index">Index Card (3x5 in)</option>
                 <option value="custom">Custom</option>
+            </select>
+        </div>
+        <div class="row">
+            <label>Paper Lines (Visual):</label>
+            <select id="paperLines" onchange="draw()">
+                <option value="none">None</option>
+                <option value="index">Index Card</option>
+                <option value="wide">Wide Ruled</option>
+                <option value="college">College Ruled</option>
             </select>
         </div>
         <div class="row">
@@ -209,6 +219,10 @@
         <div class="row"><label>Pen Offset Y (<span class="unit-label">mm</span>):</label><input type="text" id="offY" onchange="applyHardware()"></div>
         <div class="row"><label>Pen Extension (<span class="unit-label">mm</span>):</label><input type="text" id="zCal" onchange="applyHardware()"></div>
         <div class="row"><label>Z Pressure (<span class="unit-label">mm</span>):</label><input type="text" id="zPres" onchange="applyHardware()"></div>
+        <div class="row" style="margin-top: 10px;">
+            <label title="Sorts paths to minimize pen travel time.">Optimize Print Path:</label>
+            <input type="checkbox" id="optimizePath" checked style="margin-right:0;">
+        </div>
     </div>
 
     <button class="btn-primary" onclick="generateGCode()">Generate G-Code</button>
@@ -388,9 +402,51 @@
             ctx.fillText("Printable Area (Offset Applied)", sP1.x + 5, sP1.y + 18);
         }
 
-        // Draw Paper
+        // Draw Paper Fill
         let p1 = toScreen(paper.x, paper.y + paper.h), p2 = toScreen(paper.x + paper.w, paper.y);
         ctx.fillStyle = "rgba(255, 255, 255, 0.85)"; ctx.fillRect(p1.x, p1.y, p2.x - p1.x, p2.y - p1.y);
+
+        // --- DRAW VISUAL PAPER LINES ---
+        let lineType = document.getElementById('paperLines').value;
+        if (lineType !== 'none') {
+            let startY, step, marginX;
+            ctx.lineWidth = 1;
+            
+            if (lineType === 'college') {
+                startY = 31.75; step = 7.1; marginX = 31.75;
+            } else if (lineType === 'wide') {
+                startY = 31.75; step = 8.7; marginX = 31.75;
+            } else if (lineType === 'index') {
+                startY = 22.2; step = 6.35; marginX = 0;
+            }
+
+            // Vertical Margin Line (Red)
+            if (marginX > 0 && marginX < paper.w) {
+                let mX = paper.x + marginX;
+                let mp1 = toScreen(mX, paper.y + paper.h);
+                let mp2 = toScreen(mX, paper.y);
+                ctx.strokeStyle = "rgba(255, 100, 100, 0.4)";
+                ctx.beginPath(); ctx.moveTo(mp1.x, mp1.y); ctx.lineTo(mp2.x, mp2.y); ctx.stroke();
+            }
+
+            // Horizontal Writing Lines (Blue / Top Red for Index)
+            let firstLine = true;
+            for (let currY = paper.y + paper.h - startY; currY > paper.y; currY -= step) {
+                let lp1 = toScreen(paper.x, currY);
+                let lp2 = toScreen(paper.x + paper.w, currY);
+                
+                if (lineType === 'index' && firstLine) {
+                    ctx.strokeStyle = "rgba(255, 100, 100, 0.4)"; 
+                } else {
+                    ctx.strokeStyle = "rgba(100, 150, 255, 0.4)"; 
+                }
+                firstLine = false;
+                
+                ctx.beginPath(); ctx.moveTo(lp1.x, lp1.y); ctx.lineTo(lp2.x, lp2.y); ctx.stroke();
+            }
+        }
+
+        // Draw Paper Border Stroke
         ctx.strokeStyle = "#999"; ctx.strokeRect(p1.x, p1.y, p2.x - p1.x, p2.y - p1.y);
 
         // Draw SVG Objects
@@ -531,65 +587,43 @@
 
     // --- Keyboard Shortcuts (Copy, Paste, Delete) ---
     window.addEventListener('keydown', e => {
-        // Ignore if user is typing inside an input or select box
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
 
-        // Delete or Backspace
         if (e.key === 'Delete' || e.key === 'Backspace') {
-            if (selectedSvg) {
-                deleteSVG();
-            }
+            if (selectedSvg) deleteSVG();
         }
 
-        // Ctrl+C / Cmd+C (Copy)
         if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'C')) {
             if (selectedSvg) {
-                // Deep copy paths to avoid coordinate mutation
                 let copiedPaths = selectedSvg.paths.map(path => {
-                    return {
-                        points: path.points.map(pt => ({ x: pt.x, y: pt.y }))
-                    };
+                    return { points: path.points.map(pt => ({ x: pt.x, y: pt.y })) };
                 });
                 
                 clipboardSvg = {
                     paths: copiedPaths,
-                    origW: selectedSvg.origW,
-                    origH: selectedSvg.origH,
-                    rawXmin: selectedSvg.rawXmin,
-                    rawYmin: selectedSvg.rawYmin,
-                    w: selectedSvg.w,
-                    h: selectedSvg.h,
-                    rot: selectedSvg.rot,
-                    x: selectedSvg.x,
-                    y: selectedSvg.y
+                    origW: selectedSvg.origW, origH: selectedSvg.origH,
+                    rawXmin: selectedSvg.rawXmin, rawYmin: selectedSvg.rawYmin,
+                    w: selectedSvg.w, h: selectedSvg.h,
+                    rot: selectedSvg.rot, x: selectedSvg.x, y: selectedSvg.y
                 };
             }
         }
 
-        // Ctrl+V / Cmd+V (Paste)
         if ((e.ctrlKey || e.metaKey) && (e.key === 'v' || e.key === 'V')) {
             if (clipboardSvg) {
-                // Deep copy again when pasting so multiple pastes stay fully independent
                 let pastedPaths = clipboardSvg.paths.map(path => {
-                    return {
-                        points: path.points.map(pt => ({ x: pt.x, y: pt.y }))
-                    };
+                    return { points: path.points.map(pt => ({ x: pt.x, y: pt.y })) };
                 });
 
                 let newSvg = {
                     paths: pastedPaths,
-                    origW: clipboardSvg.origW,
-                    origH: clipboardSvg.origH,
-                    rawXmin: clipboardSvg.rawXmin,
-                    rawYmin: clipboardSvg.rawYmin,
-                    w: clipboardSvg.w,
-                    h: clipboardSvg.h,
+                    origW: clipboardSvg.origW, origH: clipboardSvg.origH,
+                    rawXmin: clipboardSvg.rawXmin, rawYmin: clipboardSvg.rawYmin,
+                    w: clipboardSvg.w, h: clipboardSvg.h,
                     rot: clipboardSvg.rot,
-                    x: clipboardSvg.x + 10, // Offset paste position slightly
-                    y: clipboardSvg.y - 10  // Move down visually
+                    x: clipboardSvg.x + 10, y: clipboardSvg.y - 10 
                 };
 
-                // Move clipboard origin so multiple quick pastes stagger themselves
                 clipboardSvg.x += 10;
                 clipboardSvg.y -= 10;
 
@@ -609,6 +643,7 @@
         let val = document.getElementById('paperPreset').value;
         if(val === 'letter') { paper.w = 215.9; paper.h = 279.4; }
         else if(val === 'a4') { paper.w = 210.0; paper.h = 297.0; }
+        else if(val === 'stationary') { paper.w = 114.3; paper.h = 152.4; } 
         else if(val === 'index') { paper.w = 76.2; paper.h = 127.0; }
         
         if(val !== 'custom') {
@@ -725,7 +760,6 @@
         let parsedPaths = [];
         let xMin = Infinity, xMax = -Infinity, yMin = Infinity, yMax = -Infinity;
 
-        // Fetch User Resolution Quality
         let resSelect = document.getElementById('svgRes');
         let qualityRes = resSelect ? parseFloat(resSelect.value) : 2.5;
 
@@ -733,9 +767,8 @@
             let length = element.getTotalLength ? element.getTotalLength() : 0;
             if(length === 0) return;
 
-            // OPTIMIZATION: Dynamically scale points based on user quality, with a hard safety cap
             let numSamples = Math.max(5, Math.ceil(length / qualityRes));
-            if (numSamples > 3000) numSamples = 3000; // Hard cap prevents browser crash on huge internal coordinates
+            if (numSamples > 3000) numSamples = 3000; 
 
             let points = [];
             for(let i = 0; i <= numSamples; i++) {
@@ -883,7 +916,6 @@
         reader.readAsText(file);
     }
 
-    // --- OPTIMIZED IMAGE TRACING SYSTEM ---
     function handleImageUpload(event) {
         const file = event.target.files[0];
         if (!file) return;
@@ -891,7 +923,6 @@
         reader.onload = function(e) {
             let img = new Image();
             img.onload = function() {
-                // Pre-process: Downscale huge smartphone photos to prevent trace engine freezing
                 let maxDim = 800;
                 let w = img.width; let h = img.height;
                 
@@ -905,7 +936,6 @@
                 tempCanvas.width = w; tempCanvas.height = h;
                 let tCtx = tempCanvas.getContext('2d');
                 
-                // Pre-process: Fill white background to prevent transparent PNGs from tracing poorly
                 tCtx.fillStyle = "#ffffff"; 
                 tCtx.fillRect(0, 0, w, h);
                 tCtx.drawImage(img, 0, 0, w, h);
@@ -978,26 +1008,34 @@
         let isHardwareSquish = false;
         let isDrawingOnAir = false;
         
+        // 1. Gather all absolute machine paths
+        let globalMachinePaths = [];
+
         svgs.forEach(svg => {
             let scaleX = svg.w / svg.origW; let scaleY = svg.h / svg.origH;
             let cx = svg.x + svg.w / 2; let cy = svg.y + svg.h / 2;
 
             svg.paths.forEach(path => {
+                if(path.points.length === 0) return;
+                
+                let machinePath = [];
                 path.points.forEach((pt) => {
                     let inkX = svg.x + ((pt.x - svg.rawXmin) * scaleX);
                     let inkY = svg.y + svg.h - ((pt.y - svg.rawYmin) * scaleY);
                     let rotPt = rotatePoint(inkX, inkY, cx, cy, -svg.rot);
 
-                    let checkNozX = rotPt.x - hw.offX; 
-                    let checkNozY = rotPt.y + hw.offY; 
+                    let nozX = rotPt.x - hw.offX; 
+                    let nozY = rotPt.y + hw.offY; 
 
-                    if(checkNozX < 0 || checkNozX > BED_W || checkNozY < 0 || checkNozY > BED_H) {
-                        isHardwareSquish = true;
-                    }
-                    if(rotPt.x < 0 || rotPt.x > BED_W || rotPt.y < 0 || rotPt.y > BED_H) {
-                        isDrawingOnAir = true;
-                    }
+                    if(nozX < 0 || nozX > BED_W || nozY < 0 || nozY > BED_H) isHardwareSquish = true;
+                    if(rotPt.x < 0 || rotPt.x > BED_W || rotPt.y < 0 || rotPt.y > BED_H) isDrawingOnAir = true;
+
+                    nozX = Math.max(0, Math.min(BED_W, nozX)); 
+                    nozY = Math.max(0, Math.min(BED_H, nozY));
+
+                    machinePath.push({x: nozX, y: nozY});
                 });
+                globalMachinePaths.push(machinePath);
             });
         });
 
@@ -1009,6 +1047,56 @@
             if(!proceed) return;
         }
 
+        // 2. Optimize Paths (Travelling Salesperson Problem - Nearest Neighbor)
+        let finalPathsToDraw = [];
+        let shouldOptimize = document.getElementById('optimizePath').checked;
+
+        if (shouldOptimize) {
+            let unoptimized = [...globalMachinePaths];
+            let currX = 0, currY = 0; // Assume printer homes/starts near 0,0
+
+            while (unoptimized.length > 0) {
+                let bestIdx = -1;
+                let bestDist = Infinity;
+                let reversePath = false;
+
+                for (let i = 0; i < unoptimized.length; i++) {
+                    let pts = unoptimized[i];
+                    let startPt = pts[0];
+                    let endPt = pts[pts.length - 1];
+
+                    let distToStart = Math.hypot(startPt.x - currX, startPt.y - currY);
+                    let distToEnd = Math.hypot(endPt.x - currX, endPt.y - currY);
+
+                    if (distToStart < bestDist) {
+                        bestDist = distToStart;
+                        bestIdx = i;
+                        reversePath = false;
+                    }
+                    if (distToEnd < bestDist) {
+                        bestDist = distToEnd;
+                        bestIdx = i;
+                        reversePath = true;
+                    }
+                }
+
+                if (bestIdx !== -1) {
+                    let chosenPath = unoptimized.splice(bestIdx, 1)[0];
+                    if (reversePath) chosenPath.reverse();
+                    finalPathsToDraw.push(chosenPath);
+                    
+                    let lastPt = chosenPath[chosenPath.length - 1];
+                    currX = lastPt.x;
+                    currY = lastPt.y;
+                } else {
+                    break;
+                }
+            }
+        } else {
+            finalPathsToDraw = globalMachinePaths;
+        }
+
+        // 3. Assemble G-Code String
         let zDraw = hw.zCal - hw.zPres;
         let zTravel = hw.zCal + 5.0;
         let speedTravel = 6000;
@@ -1026,35 +1114,18 @@
             "M117 Plotting... Turn knob to Live-Adjust Z"
         ];
 
-        // Draw vectors exactly as structured originally
-        svgs.forEach(svg => {
-            let scaleX = svg.w / svg.origW; let scaleY = svg.h / svg.origH;
-            let cx = svg.x + svg.w / 2; let cy = svg.y + svg.h / 2;
-
-            svg.paths.forEach(path => {
-                if(path.points.length === 0) return;
-                
-                path.points.forEach((pt, i) => {
-                    let inkX = svg.x + ((pt.x - svg.rawXmin) * scaleX);
-                    let inkY = svg.y + svg.h - ((pt.y - svg.rawYmin) * scaleY);
-                    let rotPt = rotatePoint(inkX, inkY, cx, cy, -svg.rot);
-
-                    let nozX = rotPt.x - hw.offX; 
-                    let nozY = rotPt.y + hw.offY; 
-
-                    nozX = Math.max(0, Math.min(BED_W, nozX)); nozY = Math.max(0, Math.min(BED_H, nozY));
-
-                    if(i === 0) {
-                        gcode.push(`G1 X${nozX.toFixed(3)} Y${nozY.toFixed(3)} F${speedTravel}`);
-                        gcode.push(`G1 Z${zDraw.toFixed(3)} F${speedDraw/2}`);
-                        gcode.push("G4 P200 ; Settle down");
-                    } else {
-                        gcode.push(`G1 X${nozX.toFixed(3)} Y${nozY.toFixed(3)} F${speedDraw}`);
-                    }
-                });
-                gcode.push("G4 P200 ; Settle before lift");
-                gcode.push(`G1 Z${zTravel.toFixed(3)} F${speedTravel}`);
+        finalPathsToDraw.forEach(machinePath => {
+            machinePath.forEach((pt, i) => {
+                if(i === 0) {
+                    gcode.push(`G1 X${pt.x.toFixed(3)} Y${pt.y.toFixed(3)} F${speedTravel}`);
+                    gcode.push(`G1 Z${zDraw.toFixed(3)} F${speedDraw/2}`);
+                    gcode.push("G4 P200 ; Settle down");
+                } else {
+                    gcode.push(`G1 X${pt.x.toFixed(3)} Y${pt.y.toFixed(3)} F${speedDraw}`);
+                }
             });
+            gcode.push("G4 P200 ; Settle before lift");
+            gcode.push(`G1 Z${zTravel.toFixed(3)} F${speedTravel}`);
         });
 
         gcode.push(`G1 Z${(zTravel + 20).toFixed(2)} F${speedTravel}`);
